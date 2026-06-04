@@ -102,7 +102,7 @@ El sistema necesita crear familias de objetos relacionados (notificadores Push, 
 
 ---
 
-## 5. PATRÓN FACADE ⭐ (Patrón Mínimo Requerido)
+## 5. PATRÓN FACADE 
 
 ### Problema que resuelve
 El sistema tiene múltiples subsistemas complejos (ScrimService, EventBus, CommandInvoker, Adapters, etc.) que el cliente debe conocer y coordinar. Esto crea acoplamiento alto y código complicado en el cliente.
