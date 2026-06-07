@@ -28,7 +28,7 @@ public class EnJuegoState implements ScrimState {
     public void finalizar(Scrim scrim) {
         scrim.setEstado(new FinalizadoState());
         DomainEventBus.getInstance().publish(
-            new ScrimStateChangedEvent(scrim.getId(), "Finalizado")
+            new ScrimStateChangedEvent(scrim.getId(), "En Juego", "Finalizado")
         );
     }
     

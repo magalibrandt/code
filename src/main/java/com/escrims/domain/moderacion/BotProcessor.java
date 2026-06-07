@@ -1,7 +1,7 @@
 package com.escrims.domain.moderacion;
 
 import com.escrims.domain.model.ReporteConducta;
-import com.escrims.domain.model.ReporteConducta.Sancion;
+import com.escrims.domain.model.Sancion;
 
 /**
  * PATRÓN CHAIN OF RESPONSIBILITY - Handler Concreto 2
@@ -19,7 +19,7 @@ public class BotProcessor implements ReportProcessor {
         
         if (strikesActuales >= 3) {
             System.out.println("  → Usuario con múltiples strikes (" + strikesActuales + "). Aplicando suspensión.");
-            reporte.marcarResuelto(Sancion.SUSPENSION_24H, "Suspensión automática por múltiples strikes", "ModBot");
+            reporte.marcarResuelto(Sancion.suspension24h(), "Suspension automatica por multiples strikes", "ModBot");
             return;
         }
         
@@ -34,7 +34,7 @@ public class BotProcessor implements ReportProcessor {
         // Casos que el bot puede resolver
         if (reporte.getMotivo().equalsIgnoreCase("LENGUAJE_OFENSIVO")) {
             System.out.println("  → Lenguaje ofensivo detectado. Aplicando sanción.");
-            reporte.marcarResuelto(Sancion.ADVERTENCIA, "Contenido ofensivo moderado por bot", "ModBot");
+            reporte.marcarResuelto(Sancion.advertencia(), "Contenido ofensivo moderado por bot", "ModBot");
             return;
         }
         

@@ -16,7 +16,7 @@ public class SendGridAdapter implements ExternalServiceAdapter {
     }
     
     @Override
-    public boolean estáDisponible() {
+    public boolean estaDisponible() {
         return conectado;
     }
     

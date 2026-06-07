@@ -35,6 +35,8 @@ public class EjemploConFacade {
                                               "password456", "LATAM");
         Usuario jugador2 = facade.crearUsuario("Support", "sup@escrims.com", 
                                               "password789", "LATAM");
+        jugador1.agregarRango("Valorant", "Gold");
+        jugador2.agregarRango("Valorant", "Platinum");
         
         System.out.println("✓ Usuarios creados exitosamente\n");
         
@@ -53,27 +55,32 @@ public class EjemploConFacade {
         
         System.out.println("┌─ PASO 5: Postulaciones a scrim ────────────────────────────┐");
         // Simular más usuarios
-        for (int i = 1; i <= 9; i++) {
+        facade.postularseAScrim(scrim.getId(), jugador1.getId(), "Duelist");
+        facade.postularseAScrim(scrim.getId(), jugador2.getId(), "Support");
+        for (int i = 1; i <= 8; i++) {
             Usuario u = facade.crearUsuario("Player" + i, "p" + i + "@test.com", 
                                            "pass" + i, "LATAM");
+            u.agregarRango("Valorant", "Gold");
             facade.postularseAScrim(scrim.getId(), u.getId(), "Duelist");
         }
         System.out.println("✓ Jugadores postulados\n");
         
         System.out.println("┌─ PASO 6: Confirmación de participantes ────────────────────┐");
-        System.out.println("→ Confirmando a " + jugador1.getUsername());
-        facade.confirmarParticipacion(scrim.getId(), jugador1.getId());
-        
-        System.out.println("→ Confirmando a " + jugador2.getUsername());
-        facade.confirmarParticipacion(scrim.getId(), jugador2.getId());
+        for (Postulacion postulacion : scrim.getPostulaciones()) {
+            if (postulacion.getEstado().esAceptada()) {
+                System.out.println("→ Confirmando a " + postulacion.getUsuario().getUsername());
+                facade.confirmarParticipacion(scrim.getId(), postulacion.getUsuario().getId());
+            }
+        }
         System.out.println("✓ Todos confirmaron\n");
         
         System.out.println("┌─ PASO 7: Operaciones reversibles (Comandos) ───────────────┐");
         System.out.println("→ Asignando rol 'Duelist' a " + jugador1.getUsername());
         facade.asignarRol(scrim.getId(), jugador1.getId(), "Duelist");
         
-        System.out.println("→ Invitando jugador específico");
-        facade.invitarJugador(scrim.getId(), jugador2.getId(), "Support");
+        System.out.println("→ Intercambiando jugadores de equipos");
+        Usuario jugadorEquipoB = scrim.getEquipoB().getJugadores().get(0);
+        facade.intercambiarJugadores(scrim.getId(), jugador1.getId(), jugadorEquipoB.getId());
         System.out.println("✓ Operaciones registradas\n");
         
         System.out.println("┌─ PASO 8: Iniciar y Finalizar Scrim ─────────────────────────┐");

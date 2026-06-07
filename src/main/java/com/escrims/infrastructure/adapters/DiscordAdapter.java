@@ -16,7 +16,7 @@ public class DiscordAdapter implements ExternalServiceAdapter {
     }
     
     @Override
-    public boolean estáDisponible() {
+    public boolean estaDisponible() {
         // En un caso real, intentaría conectarse a Discord API
         return conectado;
     }

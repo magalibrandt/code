@@ -23,7 +23,7 @@ public class ConfirmadoState implements ScrimState {
     public void iniciar(Scrim scrim) {
         scrim.setEstado(new EnJuegoState());
         DomainEventBus.getInstance().publish(
-            new ScrimStateChangedEvent(scrim.getId(), "EnJuego")
+            new ScrimStateChangedEvent(scrim.getId(), "Confirmado", "En Juego")
         );
     }
     
@@ -36,7 +36,7 @@ public class ConfirmadoState implements ScrimState {
     public void cancelar(Scrim scrim) {
         scrim.setEstado(new CanceladoState());
         DomainEventBus.getInstance().publish(
-            new ScrimStateChangedEvent(scrim.getId(), "Cancelado")
+            new ScrimStateChangedEvent(scrim.getId(), "Confirmado", "Cancelado")
         );
     }
     

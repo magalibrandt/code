@@ -1,5 +1,9 @@
 # Diagrama de Estados - Scrim
 
+## Nota de implementacion
+
+El ciclo de vida de `Scrim` usa el patron State con clases concretas en `domain.state`. Los estados de `Postulacion` y `ReporteConducta` se representan con las clases de dominio `EstadoPostulacion` y `EstadoReporte`.
+
 ## Descripción
 
 El ciclo de vida de un Scrim sigue un patrón de máquina de estados con 6 estados posibles y transiciones claramente definidas.

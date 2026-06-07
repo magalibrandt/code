@@ -61,11 +61,15 @@ public class ScrimService {
         // Si se completó el cupo, ejecutar matchmaking automático
         if (scrim.estaCompleto() && scrim.getEquipoA().getJugadores().isEmpty()) {
             List<Usuario> postulados = scrim.getPostulaciones().stream()
-                .filter(p -> p.getEstado() == EstadoPostulacion.ACEPTADA)
+                .filter(p -> p.getEstado().esAceptada())
                 .map(Postulacion::getUsuario)
                 .toList();
             
             List<Usuario> seleccionados = matchmakingStrategy.seleccionar(postulados, scrim);
+            if (seleccionados.size() < scrim.getCuposTotales()) {
+                throw new IllegalStateException("Matchmaking insuficiente: seleccionados "
+                    + seleccionados.size() + " de " + scrim.getCuposTotales());
+            }
             scrim.ejecutarMatchmaking(seleccionados);
             
             System.out.println("[MATCHMAKING] Automático ejecutado. Equipos armados.");
@@ -178,25 +182,23 @@ public class ScrimService {
         auto.procesarReporte(reporte);
         
         // Aplicar sanciones al usuario
-        if (reporte.getSancion() != ReporteConducta.Sancion.NINGUNA) {
+        if (!reporte.getSancion().esNinguna()) {
             aplicarSancion(reporte.getReportado(), reporte.getSancion());
         }
     }
     
-    private void aplicarSancion(Usuario usuario, ReporteConducta.Sancion sancion) {
-        switch (sancion) {
-            case ADVERTENCIA:
-                usuario.aplicarStrike();
-                System.out.println("[SERVICE] Strike aplicado a " + usuario.getUsername());
-                break;
-            case SUSPENSION_24H:
-            case SUSPENSION_7D:
-            case BAN_PERMANENTE:
-                usuario.setStrikes(usuario.getStrikes() + 2);
-                System.out.println("[SERVICE] Usuario " + usuario.getUsername() + " sancionado: " + sancion);
-                break;
-            default:
-                break;
+    private void aplicarSancion(Usuario usuario, Sancion sancion) {
+        if (sancion.esAdvertencia()) {
+            usuario.aplicarStrike();
+            System.out.println("[SERVICE] Strike aplicado a " + usuario.getUsername());
+            return;
+        }
+        if (sancion.requiereCooldown()) {
+            usuario.setStrikes(usuario.getStrikes() + 2);
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.DAY_OF_MONTH, sancion.getDuracionDias());
+            usuario.setCooldownHasta(cal.getTime());
+            System.out.println("[SERVICE] Usuario " + usuario.getUsername() + " sancionado: " + sancion.getNombre());
         }
     }
     

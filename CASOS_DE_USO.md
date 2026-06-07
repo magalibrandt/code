@@ -1,5 +1,11 @@
 # Casos de Uso - eScrims
 
+## Alcance de implementacion
+
+Los casos de uso se ejecutan como llamadas Java directas sobre controller/facade/service. No hay API REST real ni persistencia externa. La autenticacion y algunas integraciones se mantienen como simulaciones de demo.
+
+Los estados de postulacion, estados de reporte y sanciones se modelan como clases de dominio (`EstadoPostulacion`, `EstadoReporte`, `Sancion`).
+
 ## CU1: Registrar Usuario
 
 **Actores**: Usuario (jugador)

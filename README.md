@@ -15,6 +15,14 @@ Diseñar una plataforma que facilite:
 - ✅ Comandos reversibles (Command Pattern)
 - ✅ Integraciones externas (Adapter Pattern)
 
+## Consistencia de diseño
+
+- `EstadoPostulacion`, `EstadoReporte` y `Sancion` son clases normales del dominio.
+- Las comparaciones de estado se hacen con metodos de dominio como `esAceptada()`, `esPendiente()`, `esResuelto()` y `requiereCooldown()`.
+- `ScrimController` es un controller simulado sin framework web; no hay API REST real ni Spring Boot.
+- `PatternTests` es una clase ejecutable con `main`; no se usa JUnit y los fallos lanzan `AssertionError`.
+- Las integraciones externas (`DiscordAdapter`, `SendGridAdapter`, `ICalAdapter`) son simuladas y encapsuladas por Adapter.
+
 ## Arquitectura
 
 El proyecto sigue una arquitectura en capas:
@@ -65,7 +73,7 @@ src/main/java/com/escrims/
 ├── application/                # Capa de Aplicación - Casos de uso
 │   ├── EscrimsFacade.java      # FACADE PATTERN - Interface unificada
 │   ├── ScrimService.java       # Orquestador de lógica
-│   ├── ScrimController.java    # REST API endpoints
+│   ├── ScrimController.java    # Controller simulado, sin framework REST
 │   └── builder/                # Patrón Builder
 │       └── ScrimBuilder.java
 ├── infrastructure/             # Capa de Infraestructura - Detalles técnicos
@@ -267,7 +275,7 @@ java -cp out com.escrims.Main
 2. Marcar `src/main/java` como Source
 3. Right-click en `Main.java` > Run
 
-## API REST (Documentación)
+## Controller simulado
 
 ### Autenticación
 ```http
@@ -367,7 +375,7 @@ service.procesarReporte(reporte);
 - Cambio de estrategias en runtime
 
 ### E2E Tests
-- API REST desde cliente
+- Flujo de cliente simulado mediante llamadas Java a controller/facade
 - Eventos publicados y suscritos
 - Notificaciones multi-canal
 
@@ -548,8 +556,11 @@ Ver `INSTRUCCIONES_COMPILACION.md` para soluciones detalladas a problemas comune
 
 ## Integrantes
 
-[Completar con nombres, apellidos y LU de los integrantes del grupo]
-
+Agustín Arguello - LU 1167126
+Taiel Vinograd - LU 1167839
+Melinda Selles - LU 1124972
+Germán Schettini - LU 1163057
+Magali Brandt - LU 1167149
 ## Fecha de Entrega
 
-10/11/2025
+18/06/2026

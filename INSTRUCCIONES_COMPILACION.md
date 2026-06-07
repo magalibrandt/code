@@ -90,6 +90,16 @@ java -cp out com.escrims.Main
 3. VS Code debería detectar automáticamente la estructura
 4. Presiona F5 o usa el botón "Run" en Main.java
 
+## Ejecutar demos y tests
+
+```bash
+java -cp out com.escrims.DemoCompleta
+java -cp out com.escrims.EjemploConFacade
+java -cp out com.escrims.tests.PatternTests
+```
+
+`PatternTests` no usa JUnit ni requiere `-ea`; lanza `AssertionError` explicitamente si una validacion falla.
+
 ## Estructura Correcta del Proyecto
 
 \`\`\`

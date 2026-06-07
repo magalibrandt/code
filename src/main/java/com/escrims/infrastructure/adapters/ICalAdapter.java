@@ -19,7 +19,7 @@ public class ICalAdapter implements ExternalServiceAdapter {
     }
     
     @Override
-    public boolean estáDisponible() {
+    public boolean estaDisponible() {
         return conectado;
     }
     

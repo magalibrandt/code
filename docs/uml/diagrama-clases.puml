@@ -1,0 +1,791 @@
+@startuml
+title TPO E-Sports Scrims Matchmaking - Diagrama de Clases Actualizado
+
+scale 0.45
+left to right direction
+
+skinparam classAttributeIconSize 10
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam nodesep 35
+skinparam ranksep 45
+skinparam linetype ortho
+' hide circle
+
+' =========================================================
+' APPLICATION
+' =========================================================
+
+package "application.controller" {
+
+    class ScrimController <<Controller>> {
+        - scrimService: ScrimService
+        + ScrimController(scrimService: ScrimService)
+        + registrarUsuario(username: String, email: String, password: String, region: String): Usuario
+        + autenticar(email: String, password: String): Map<String, Object>
+        + buscarScrims(filtros: Map<String, Object>): List<Scrim>
+        + crearScrim(creadorId: UUID, datos: Map<String, Object>): Scrim
+        + postularseAScrim(scrimId: UUID, usuarioId: UUID, rol: String): void
+        + confirmarParticipacion(scrimId: UUID, usuarioId: UUID): void
+        + iniciarScrim(scrimId: UUID): void
+        + finalizarScrim(scrimId: UUID): void
+        + cancelarScrim(scrimId: UUID): void
+        + cargarEstadisticas(scrimId: UUID, datos: Map<String, Object>): Map<String, Object>
+        + ejecutarComando(scrimId: UUID, comando: String): Map<String, Object>
+    }
+}
+
+package "application.facade" {
+
+    class EscrimsFacade <<Facade>> {
+        - scrimService: ScrimService
+        - eventBus: DomainEventBus
+        - notificationSubscriber: NotificationSubscriber
+        - notifierFactory: NotifierFactory
+        - discordAdapter: DiscordAdapter
+        - sendGridAdapter: SendGridAdapter
+        - iCalAdapter: ICalAdapter
+        + EscrimsFacade(strategy: MatchmakingStrategy)
+        + crearUsuario(username: String, email: String, password: String, region: String): Usuario
+        + crearScrim(creadorId: UUID, juego: String, formato: String, region: String): Scrim
+        + buscarScrims(): List<Scrim>
+        + postularseAScrim(scrimId: UUID, usuarioId: UUID, rol: String): void
+        + confirmarParticipacion(scrimId: UUID, usuarioId: UUID): void
+        + iniciarScrim(scrimId: UUID): void
+        + finalizarScrim(scrimId: UUID): void
+        + cancelarScrim(scrimId: UUID): void
+        + cambiarEstrategiaMatchmaking(strategy: MatchmakingStrategy): void
+        + asignarRol(scrimId: UUID, usuarioId: UUID, rol: String): void
+        + intercambiarJugadores(scrimId: UUID, usuario1Id: UUID, usuario2Id: UUID): void
+        + invitarJugador(scrimId: UUID, usuarioId: UUID, rol: String): void
+        + reportarConductaInapropiada(scrimId: UUID, reportadorId: UUID, reportadoId: UUID, motivo: String): void
+    }
+}
+
+package "application.service" {
+
+    class ScrimService <<Service>> {
+        - scrimRepository: Map<UUID, Scrim>
+        - usuarioRepository: Map<UUID, Usuario>
+        - matchmakingStrategy: MatchmakingStrategy
+        + ScrimService(strategy: MatchmakingStrategy)
+        + crearScrim(creador: Usuario, juego: String, formato: String, region: String): Scrim
+        + postularseAScrim(scrimId: UUID, usuarioId: UUID, rolDeseado: String): void
+        + emparejarYArmarLobby(scrimId: UUID): void
+        + confirmarParticipacion(scrimId: UUID, usuarioId: UUID): void
+        + iniciarScrim(scrimId: UUID): void
+        + finalizarScrim(scrimId: UUID): void
+        + cancelarScrim(scrimId: UUID): void
+        + procesarReporte(reporte: ReporteConducta): void
+        + setMatchmakingStrategy(strategy: MatchmakingStrategy): void
+        + getScrimRepository(): Map<UUID, Scrim>
+        + getUsuarioRepository(): Map<UUID, Usuario>
+    }
+}
+
+package "application.builder" {
+
+    class ScrimBuilder <<Builder>> {
+        - scrim: Scrim
+        + ScrimBuilder(creador: Usuario, juego: String, formato: String, region: String)
+        + conRangos(rangoMin: String, rangoMax: String): ScrimBuilder
+        + conLatenciaMaxima(latencia: int): ScrimBuilder
+        + conFechaHora(fechaHora: LocalDateTime): ScrimBuilder
+        + conCupos(cupos: int): ScrimBuilder
+        + conModalidad(modalidad: String): ScrimBuilder
+        + build(): Scrim
+    }
+}
+
+' =========================================================
+' DOMAIN MODEL
+' =========================================================
+
+package "domain.model" {
+
+    class Usuario {
+        - id: UUID
+        - username: String
+        - email: String
+        - passwordHash: String
+        - region: String
+        - rangoPorJuego: Map<String, String>
+        - rolesPreferidos: List<String>
+        - preferencias: PreferenciasUsuario
+        - strikes: int
+        - cooldownHasta: Date
+        + Usuario(username: String, email: String, passwordHash: String, region: String)
+        + agregarRango(juego: String, rango: String): void
+        + getRangoParaJuego(juego: String): String
+        + agregarRolPreferido(rol: String): void
+        + estaBajoSancion(): boolean
+        + aplicarStrike(): void
+        + getId(): UUID
+        + getUsername(): String
+        + getEmail(): String
+        + getRegion(): String
+        + getRolesPreferidos(): List<String>
+        + getStrikes(): int
+        + getPreferencias(): PreferenciasUsuario
+    }
+
+    class PreferenciasUsuario {
+        - juegosPreferidos: List<String>
+        - latenciaMaxima: int
+        - horariosDisponibles: List<String>
+        - recibirNotificacionesPush: boolean
+        - recibirNotificacionesEmail: boolean
+        - recibirNotificacionesDiscord: boolean
+        + PreferenciasUsuario()
+        + getJuegosPreferidos(): List<String>
+        + getHorariosDisponibles(): List<String>
+        + getLatenciaMaxima(): int
+        + isRecibirNotificacionesPush(): boolean
+        + isRecibirNotificacionesEmail(): boolean
+        + isRecibirNotificacionesDiscord(): boolean
+        + setRecibirNotificacionesPush(valor: boolean): void
+        + setRecibirNotificacionesEmail(valor: boolean): void
+        + setRecibirNotificacionesDiscord(valor: boolean): void
+    }
+
+    class Scrim {
+        - id: UUID
+        - creador: Usuario
+        - juego: String
+        - formato: String
+        - cuposTotales: int
+        - rolesPorLado: Map<String, Integer>
+        - region: String
+        - rangoMin: String
+        - rangoMax: String
+        - latenciaMax: int
+        - fechaHora: LocalDateTime
+        - duracionEstimada: int
+        - modalidad: String
+        - estado: ScrimState
+        - postulaciones: List<Postulacion>
+        - confirmaciones: List<Confirmacion>
+        - equipoA: Equipo
+        - equipoB: Equipo
+        - estadistica: Estadistica
+        + Scrim(creador: Usuario, juego: String, formato: String, region: String)
+        + postular(usuario: Usuario, rolDeseado: String): void
+        + confirmar(usuario: Usuario): void
+        + iniciar(): void
+        + finalizar(): void
+        + cancelar(): void
+        + setEstado(estado: ScrimState): void
+        + ejecutarMatchmaking(usuariosSeleccionados: List<Usuario>): void
+        + getId(): UUID
+        + getCreador(): Usuario
+        + getJuego(): String
+        + getFormato(): String
+        + getCuposTotales(): int
+        + getRegion(): String
+        + getRangoMin(): String
+        + getRangoMax(): String
+        + getLatenciaMax(): int
+        + getEstado(): ScrimState
+        + getPostulaciones(): List<Postulacion>
+        + getConfirmaciones(): List<Confirmacion>
+        + getEquipoA(): Equipo
+        + getEquipoB(): Equipo
+        + getEstadistica(): Estadistica
+    }
+
+    class Postulacion {
+        - id: UUID
+        - usuario: Usuario
+        - scrim: Scrim
+        - rolDeseado: String
+        - estado: EstadoPostulacion
+        - fechaPostulacion: Date
+        + Postulacion(usuario: Usuario, scrim: Scrim, rolDeseado: String)
+        + aceptar(): void
+        + rechazar(): void
+        + getId(): UUID
+        + getUsuario(): Usuario
+        + getScrim(): Scrim
+        + getRolDeseado(): String
+        + setRolDeseado(rol: String): void
+        + getEstado(): EstadoPostulacion
+        + setEstado(estado: EstadoPostulacion): void
+        + getFechaPostulacion(): Date
+    }
+
+    class EstadoPostulacion {
+        - nombre: String
+        + EstadoPostulacion(nombre: String)
+        + getNombre(): String
+        + esPendiente(): boolean
+        + esAceptada(): boolean
+        + esRechazada(): boolean
+    }
+
+    class Confirmacion {
+        - id: UUID
+        - usuario: Usuario
+        - scrim: Scrim
+        - confirmado: boolean
+        - fechaConfirmacion: Date
+        + Confirmacion(usuario: Usuario, scrim: Scrim)
+        + confirmar(): void
+        + isConfirmado(): boolean
+        + getUsuario(): Usuario
+        + getScrim(): Scrim
+        + getFechaConfirmacion(): Date
+    }
+
+    class Equipo {
+        - nombre: String
+        - jugadores: List<Usuario>
+        - rolesAsignados: Map<Usuario, String>
+        + Equipo(nombre: String)
+        + agregarJugador(usuario: Usuario): void
+        + removerJugador(usuario: Usuario): void
+        + asignarRol(usuario: Usuario, rol: String): void
+        + getRolDeJugador(usuario: Usuario): String
+        + getJugadores(): List<Usuario>
+        + getNombre(): String
+    }
+
+    class Estadistica {
+        - id: UUID
+        - scrim: Scrim
+        - estadisticasPorJugador: Map<Usuario, EstadisticaJugador>
+        - equipoGanador: String
+        - observaciones: String
+        + Estadistica(scrim: Scrim)
+        + agregarEstadisticaJugador(usuario: Usuario, estadistica: EstadisticaJugador): void
+        + getEstadisticaJugador(usuario: Usuario): EstadisticaJugador
+        + getEquipoGanador(): String
+        + setEquipoGanador(equipoGanador: String): void
+        + getObservaciones(): String
+        + setObservaciones(observaciones: String): void
+    }
+
+    class EstadisticaJugador {
+        - kills: int
+        - deaths: int
+        - assists: int
+        - mvp: boolean
+        - rating: int
+        + EstadisticaJugador(kills: int, deaths: int, assists: int)
+        + getKDA(): double
+        + getKills(): int
+        + getDeaths(): int
+        + getAssists(): int
+        + isMvp(): boolean
+        + setMvp(mvp: boolean): void
+        + getRating(): int
+        + setRating(rating: int): void
+    }
+
+    class ReporteConducta {
+        - id: UUID
+        - scrim: Scrim
+        - reportador: Usuario
+        - reportado: Usuario
+        - motivo: String
+        - descripcion: String
+        - estado: EstadoReporte
+        - sancion: Sancion
+        - fechaCreacion: Date
+        - fechaResolucion: Date
+        - notas: String
+        - procesadorResolvio: String
+        + ReporteConducta(scrim: Scrim, reportador: Usuario, reportado: Usuario, motivo: String, descripcion: String)
+        + esReportePendiente(): boolean
+        + marcarResuelto(sancion: Sancion, notas: String, procesador: String): void
+        + getReportado(): Usuario
+        + getReportador(): Usuario
+        + getMotivo(): String
+        + getDescripcion(): String
+        + getEstado(): EstadoReporte
+        + getSancion(): Sancion
+        + getNotas(): String
+    }
+
+    class EstadoReporte {
+        - nombre: String
+        + EstadoReporte(nombre: String)
+        + getNombre(): String
+        + esPendiente(): boolean
+        + esEnRevision(): boolean
+        + esResuelto(): boolean
+        + esDescartado(): boolean
+    }
+
+    class Sancion {
+        - nombre: String
+        - descripcion: String
+        - duracionDias: int
+        + Sancion(nombre: String, descripcion: String, duracionDias: int)
+        + getNombre(): String
+        + getDescripcion(): String
+        + getDuracionDias(): int
+        + requiereCooldown(): boolean
+    }
+}
+
+' =========================================================
+' STATE
+' =========================================================
+
+package "domain.state" {
+
+    interface ScrimState <<interface>> {
+        + postular(scrim: Scrim, usuario: Usuario, rolDeseado: String): void
+        + confirmar(scrim: Scrim, usuario: Usuario): void
+        + iniciar(scrim: Scrim): void
+        + finalizar(scrim: Scrim): void
+        + cancelar(scrim: Scrim): void
+        + getNombre(): String
+    }
+
+    class BuscandoJugadoresState {
+        + postular(scrim: Scrim, usuario: Usuario, rolDeseado: String): void
+        + confirmar(scrim: Scrim, usuario: Usuario): void
+        + iniciar(scrim: Scrim): void
+        + finalizar(scrim: Scrim): void
+        + cancelar(scrim: Scrim): void
+        + getNombre(): String
+    }
+
+    class LobbyArmadoState {
+        + postular(scrim: Scrim, usuario: Usuario, rolDeseado: String): void
+        + confirmar(scrim: Scrim, usuario: Usuario): void
+        + iniciar(scrim: Scrim): void
+        + finalizar(scrim: Scrim): void
+        + cancelar(scrim: Scrim): void
+        + getNombre(): String
+    }
+
+    class ConfirmadoState {
+        + postular(scrim: Scrim, usuario: Usuario, rolDeseado: String): void
+        + confirmar(scrim: Scrim, usuario: Usuario): void
+        + iniciar(scrim: Scrim): void
+        + finalizar(scrim: Scrim): void
+        + cancelar(scrim: Scrim): void
+        + getNombre(): String
+    }
+
+    class EnJuegoState {
+        + postular(scrim: Scrim, usuario: Usuario, rolDeseado: String): void
+        + confirmar(scrim: Scrim, usuario: Usuario): void
+        + iniciar(scrim: Scrim): void
+        + finalizar(scrim: Scrim): void
+        + cancelar(scrim: Scrim): void
+        + getNombre(): String
+    }
+
+    class FinalizadoState {
+        + postular(scrim: Scrim, usuario: Usuario, rolDeseado: String): void
+        + confirmar(scrim: Scrim, usuario: Usuario): void
+        + iniciar(scrim: Scrim): void
+        + finalizar(scrim: Scrim): void
+        + cancelar(scrim: Scrim): void
+        + getNombre(): String
+    }
+
+    class CanceladoState {
+        + postular(scrim: Scrim, usuario: Usuario, rolDeseado: String): void
+        + confirmar(scrim: Scrim, usuario: Usuario): void
+        + iniciar(scrim: Scrim): void
+        + finalizar(scrim: Scrim): void
+        + cancelar(scrim: Scrim): void
+        + getNombre(): String
+    }
+}
+
+ScrimState <|.. BuscandoJugadoresState
+ScrimState <|.. LobbyArmadoState
+ScrimState <|.. ConfirmadoState
+ScrimState <|.. EnJuegoState
+ScrimState <|.. FinalizadoState
+ScrimState <|.. CanceladoState
+
+' =========================================================
+' STRATEGY
+' =========================================================
+
+package "domain.strategy" {
+
+    interface MatchmakingStrategy <<interface>> {
+        + seleccionar(candidatos: List<Usuario>, scrim: Scrim): List<Usuario>
+        + getNombreEstrategia(): String
+    }
+
+    class ByMMRStrategy {
+        - rangoValores: Map<String, Integer>
+        + ByMMRStrategy()
+        + seleccionar(candidatos: List<Usuario>, scrim: Scrim): List<Usuario>
+        + getNombreEstrategia(): String
+    }
+
+    class ByLatencyStrategy {
+        - latenciasPorRegion: Map<String, Map<String, Integer>>
+        + ByLatencyStrategy()
+        + seleccionar(candidatos: List<Usuario>, scrim: Scrim): List<Usuario>
+        + getNombreEstrategia(): String
+        - calcularLatencia(regionUsuario: String, regionScrim: String): int
+    }
+
+    class ByHistoryStrategy {
+        + ByHistoryStrategy()
+        + seleccionar(candidatos: List<Usuario>, scrim: Scrim): List<Usuario>
+        + getNombreEstrategia(): String
+    }
+}
+
+MatchmakingStrategy <|.. ByMMRStrategy
+MatchmakingStrategy <|.. ByLatencyStrategy
+MatchmakingStrategy <|.. ByHistoryStrategy
+
+' =========================================================
+' COMMAND
+' =========================================================
+
+package "domain.command" {
+
+    interface ScrimCommand <<interface>> {
+        + execute(scrim: Scrim): void
+        + undo(scrim: Scrim): void
+        + getDescription(): String
+    }
+
+    class AsignarRolCommand {
+        - usuario: Usuario
+        - nuevoRol: String
+        - rolAnterior: String
+        + AsignarRolCommand(usuario: Usuario, nuevoRol: String)
+        + execute(scrim: Scrim): void
+        + undo(scrim: Scrim): void
+        + getDescription(): String
+    }
+
+    class InvitarJugadorCommand {
+        - usuarioInvitado: Usuario
+        - rolSugerido: String
+        + InvitarJugadorCommand(usuarioInvitado: Usuario, rolSugerido: String)
+        + execute(scrim: Scrim): void
+        + undo(scrim: Scrim): void
+        + getDescription(): String
+    }
+
+    class SwapJugadoresCommand {
+        - usuario1: Usuario
+        - usuario2: Usuario
+        + SwapJugadoresCommand(usuario1: Usuario, usuario2: Usuario)
+        + execute(scrim: Scrim): void
+        + undo(scrim: Scrim): void
+        + getDescription(): String
+    }
+
+    class CommandInvoker {
+        - scrim: Scrim
+        - comandosEjecutados: Stack<ScrimCommand>
+        - comandosDeshechos: Stack<ScrimCommand>
+        + CommandInvoker(scrim: Scrim)
+        + ejecutar(comando: ScrimCommand): void
+        + deshacer(): void
+        + rehacer(): void
+    }
+}
+
+ScrimCommand <|.. AsignarRolCommand
+ScrimCommand <|.. InvitarJugadorCommand
+ScrimCommand <|.. SwapJugadoresCommand
+
+' =========================================================
+' OBSERVER / EVENTS
+' =========================================================
+
+package "domain.events" {
+
+    abstract class DomainEvent <<abstract>> {
+        - id: UUID
+        - occurredOn: Date
+        + DomainEvent()
+        + getId(): UUID
+        + getOccurredOn(): Date
+    }
+
+    class ScrimStateChangedEvent {
+        - scrimId: UUID
+        - estadoAnterior: String
+        - estadoNuevo: String
+        + ScrimStateChangedEvent(scrimId: UUID, estadoAnterior: String, estadoNuevo: String)
+        + getScrimId(): UUID
+        + getEstadoAnterior(): String
+        + getEstadoNuevo(): String
+    }
+
+    class PostulacionAceptadaEvent {
+        - scrimId: UUID
+        - usuarioId: UUID
+        + PostulacionAceptadaEvent(scrimId: UUID, usuarioId: UUID)
+        + getScrimId(): UUID
+        + getUsuarioId(): UUID
+    }
+
+    interface Subscriber <<interface>> {
+        + onEvent(event: DomainEvent): void
+        + getSubscriberName(): String
+    }
+
+    class DomainEventBus <<Singleton>> {
+        - instance: DomainEventBus
+        - subscribers: List<Subscriber>
+        - DomainEventBus()
+        + getInstance(): DomainEventBus
+        + subscribe(subscriber: Subscriber): void
+        + unsubscribe(subscriber: Subscriber): void
+        + publish(event: DomainEvent): void
+        + clearSubscribers(): void
+    }
+}
+
+DomainEvent <|-- ScrimStateChangedEvent
+DomainEvent <|-- PostulacionAceptadaEvent
+
+' =========================================================
+' MODERATION - CHAIN OF RESPONSIBILITY
+' =========================================================
+
+package "domain.moderacion" {
+
+    interface ReportProcessor <<interface>> {
+        + procesarReporte(reporte: ReporteConducta): void
+        + setSiguiente(siguiente: ReportProcessor): void
+    }
+
+    class AutomaticProcessor {
+        - siguiente: ReportProcessor
+        + AutomaticProcessor()
+        + procesarReporte(reporte: ReporteConducta): void
+        + setSiguiente(siguiente: ReportProcessor): void
+    }
+
+    class BotProcessor {
+        - siguiente: ReportProcessor
+        + BotProcessor()
+        + procesarReporte(reporte: ReporteConducta): void
+        + setSiguiente(siguiente: ReportProcessor): void
+    }
+
+    class HumanModeratorProcessor {
+        - siguiente: ReportProcessor
+        + HumanModeratorProcessor()
+        + procesarReporte(reporte: ReporteConducta): void
+        + setSiguiente(siguiente: ReportProcessor): void
+    }
+}
+
+ReportProcessor <|.. AutomaticProcessor
+ReportProcessor <|.. BotProcessor
+ReportProcessor <|.. HumanModeratorProcessor
+
+' =========================================================
+' NOTIFICATIONS - ABSTRACT FACTORY
+' =========================================================
+
+package "infrastructure.notifications" {
+
+    interface Notifier <<interface>> {
+        + send(destinatario: Usuario, titulo: String, mensaje: String): void
+        + getChannelName(): String
+    }
+
+    class PushNotifier {
+        + PushNotifier()
+        + send(destinatario: Usuario, titulo: String, mensaje: String): void
+        + getChannelName(): String
+    }
+
+    class EmailNotifier {
+        + EmailNotifier()
+        + send(destinatario: Usuario, titulo: String, mensaje: String): void
+        + getChannelName(): String
+    }
+
+    class DiscordNotifier {
+        + DiscordNotifier()
+        + send(destinatario: Usuario, titulo: String, mensaje: String): void
+        + getChannelName(): String
+    }
+
+    interface NotifierFactory <<interface>> {
+        + createPushNotifier(): Notifier
+        + createEmailNotifier(): Notifier
+        + createDiscordNotifier(): Notifier
+    }
+
+    class DevNotifierFactory {
+        + DevNotifierFactory()
+        + createPushNotifier(): Notifier
+        + createEmailNotifier(): Notifier
+        + createDiscordNotifier(): Notifier
+    }
+
+    class ProdNotifierFactory {
+        + ProdNotifierFactory()
+        + createPushNotifier(): Notifier
+        + createEmailNotifier(): Notifier
+        + createDiscordNotifier(): Notifier
+    }
+
+    class NotificationSubscriber {
+        - notifierFactory: NotifierFactory
+        - scrimRepository: Map<UUID, Scrim>
+        - usuarioRepository: Map<UUID, Usuario>
+        + NotificationSubscriber(factory: NotifierFactory)
+        + onEvent(event: DomainEvent): void
+        + getSubscriberName(): String
+        + registrarUsuario(usuario: Usuario): void
+        + registrarScrim(scrim: Scrim): void
+    }
+}
+
+Notifier <|.. PushNotifier
+Notifier <|.. EmailNotifier
+Notifier <|.. DiscordNotifier
+NotifierFactory <|.. DevNotifierFactory
+NotifierFactory <|.. ProdNotifierFactory
+Subscriber <|.. NotificationSubscriber
+
+' =========================================================
+' ADAPTERS
+' =========================================================
+
+package "infrastructure.adapters" {
+
+    interface ExternalServiceAdapter <<interface>> {
+        + estaDisponible(): boolean
+        + getNombre(): String
+    }
+
+    class DiscordAdapter {
+        - webhookUrl: String
+        - conectado: boolean
+        + DiscordAdapter(webhookUrl: String)
+        + conectar(): void
+        + desconectar(): void
+        + enviarMensaje(canal: String, mensaje: String): void
+        + estaDisponible(): boolean
+        + getNombre(): String
+    }
+
+    class SendGridAdapter {
+        - apiKey: String
+        - conectado: boolean
+        + SendGridAdapter(apiKey: String)
+        + conectar(): void
+        + desconectar(): void
+        + enviarEmail(destinatario: String, asunto: String, contenido: String): void
+        + estaDisponible(): boolean
+        + getNombre(): String
+    }
+
+    class ICalAdapter {
+        - conectado: boolean
+        + ICalAdapter()
+        + conectar(): void
+        + desconectar(): void
+        + exportarEvento(titulo: String, fecha: LocalDateTime, duracion: int): String
+        + estaDisponible(): boolean
+        + getNombre(): String
+    }
+}
+
+ExternalServiceAdapter <|.. DiscordAdapter
+ExternalServiceAdapter <|.. SendGridAdapter
+ExternalServiceAdapter <|.. ICalAdapter
+
+' =========================================================
+' RELACIONES PRINCIPALES
+' =========================================================
+
+ScrimController "1" --> "1" ScrimService : delega operaciones en
+
+EscrimsFacade "1" --> "1" ScrimService : coordina casos de uso con
+EscrimsFacade "1" --> "1" DomainEventBus : publica eventos mediante
+EscrimsFacade "1" --> "1" NotificationSubscriber : registra notificaciones en
+EscrimsFacade "1" --> "1" NotifierFactory : crea notificadores con
+EscrimsFacade "1" --> "1" DiscordAdapter : integra mensajes mediante
+EscrimsFacade "1" --> "1" SendGridAdapter : integra emails mediante
+EscrimsFacade "1" --> "1" ICalAdapter : exporta eventos mediante
+EscrimsFacade "1" ..> "1" ScrimBuilder : construye scrims con
+EscrimsFacade "1" ..> "0..*" CommandInvoker : ejecuta comandos con
+
+ScrimService "1" --> "1" MatchmakingStrategy : selecciona candidatos con
+ScrimService "1" --> "0..*" Scrim : gestiona
+ScrimService "1" --> "0..*" Usuario : administra
+ScrimService "1" ..> "1" ReportProcessor : procesa reportes mediante
+
+ScrimBuilder "1" --> "1" Scrim : construye
+
+Usuario "1" *-- "1" PreferenciasUsuario : posee
+
+Scrim "1" --> "1" Usuario : fue creado por
+Scrim "1" *-- "1" ScrimState : delega comportamiento en
+Scrim "1" *-- "0..*" Postulacion : contiene
+Scrim "1" *-- "0..*" Confirmacion : registra
+Scrim "1" *-- "2" Equipo : organiza jugadores en
+Scrim "1" o-- "0..1" Estadistica : resume resultado con
+
+Postulacion "1" --> "1" Usuario : pertenece a
+Postulacion "1" --> "1" Scrim : se realiza sobre
+Postulacion "1" --> "1" EstadoPostulacion : tiene estado
+
+Confirmacion "1" --> "1" Usuario : confirma a
+Confirmacion "1" --> "1" Scrim : corresponde a
+
+Equipo "1" o-- "0..*" Usuario : agrupa
+Equipo "1" --> "0..*" Usuario : asigna roles a
+
+Estadistica "1" --> "1" Scrim : pertenece a
+Estadistica "1" *-- "0..*" EstadisticaJugador : compone resultados por jugador
+EstadisticaJugador "1" ..> "1" Usuario : describe rendimiento de
+
+ReporteConducta "1" --> "1" Scrim : se origina en
+ReporteConducta "1" --> "1" Usuario : es emitido por
+ReporteConducta "1" --> "1" Usuario : reporta a
+ReporteConducta "1" --> "1" EstadoReporte : tiene estado
+ReporteConducta "1" --> "0..1" Sancion : aplica sanción
+
+CommandInvoker "1" --> "1" Scrim : ejecuta comandos sobre
+CommandInvoker "1" o-- "0..*" ScrimCommand : almacena historial de
+AsignarRolCommand "1" --> "1" Usuario : asigna rol a
+InvitarJugadorCommand "1" --> "1" Usuario : invita a
+SwapJugadoresCommand "1" --> "2" Usuario : intercambia entre
+
+DomainEventBus "1" o-- "0..*" Subscriber : notifica a
+DomainEventBus "1" --> "0..*" DomainEvent : publica
+NotificationSubscriber "1" --> "1" NotifierFactory : solicita notificadores a
+NotificationSubscriber "1" ..> "0..*" Notifier : envía notificaciones con
+NotificationSubscriber "1" --> "0..*" Scrim : consulta scrims
+NotificationSubscriber "1" --> "0..*" Usuario : consulta usuarios
+
+AutomaticProcessor "1" --> "0..1" BotProcessor : deriva reporte a
+BotProcessor "1" --> "0..1" HumanModeratorProcessor : escala reporte a
+
+DevNotifierFactory "1" ..> "1" PushNotifier : crea
+DevNotifierFactory "1" ..> "1" EmailNotifier : crea
+DevNotifierFactory "1" ..> "1" DiscordNotifier : crea
+ProdNotifierFactory "1" ..> "1" PushNotifier : crea
+ProdNotifierFactory "1" ..> "1" EmailNotifier : crea
+ProdNotifierFactory "1" ..> "1" DiscordNotifier : crea
+
+legend right
+  <b>Referencias</b>
+  <<interface>> = Interfaz
+  <<abstract>> = Clase abstracta
+  <<Controller>> = Controlador
+  <<Service>> = Servicio de aplicación
+  <<Facade>> = Fachada
+  <<Builder>> = Constructor de objetos
+  <<Singleton>> = Instancia única
+endlegend
+
+@enduml

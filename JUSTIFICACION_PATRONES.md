@@ -1,5 +1,11 @@
 # Justificación de Patrones de Diseño - eScrims
 
+## Nota de consistencia con el UML actualizado
+
+`EstadoPostulacion`, `EstadoReporte` y `Sancion` son clases con atributos y comportamiento propio, alineadas con el diagrama de clases.
+
+El patron Command opera sobre el lobby armado: `AsignarRolCommand` modifica el rol asignado en `Equipo`, `SwapJugadoresCommand` intercambia jugadores entre `Equipo A` y `Equipo B`, e `InvitarJugadorCommand` registra una postulacion mediante el flujo de dominio.
+
 ## 1. PATRÓN STATE
 
 ### Problema que resuelve

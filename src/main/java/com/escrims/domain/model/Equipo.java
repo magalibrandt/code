@@ -18,8 +18,13 @@ public class Equipo {
     // Getters
     public UUID getId() { return id; }
     public String getLado() { return lado; }
-    public List<Usuario> getJugadores() { return jugadores; }
-    public Map<Usuario, String> getRolesAsignados() { return rolesAsignados; }
+    public String getNombre() { return lado; }
+    public List<Usuario> getJugadores() { return Collections.unmodifiableList(jugadores); }
+    public Map<Usuario, String> getRolesAsignados() { return Collections.unmodifiableMap(rolesAsignados); }
+    
+    public void agregarJugador(Usuario usuario) {
+        agregarJugador(usuario, null);
+    }
     
     public void agregarJugador(Usuario usuario, String rol) {
         if (!jugadores.contains(usuario)) {
@@ -35,11 +40,19 @@ public class Equipo {
     
     public void asignarRol(Usuario usuario, String rol) {
         if (jugadores.contains(usuario)) {
-            rolesAsignados.put(usuario, rol);
+            if (rol == null) {
+                rolesAsignados.remove(usuario);
+            } else {
+                rolesAsignados.put(usuario, rol);
+            }
         }
     }
     
     public String getRolDeJugador(Usuario usuario) {
         return rolesAsignados.get(usuario);
+    }
+    
+    public boolean contieneJugador(Usuario usuario) {
+        return jugadores.contains(usuario);
     }
 }

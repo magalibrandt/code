@@ -129,6 +129,11 @@ public class DemoCompleta {
         }
         
         System.out.println("✓ Cupo completo! Estado: " + scrim.getNombreEstado() + "\n");
+        List<Usuario> aceptados = scrim.getPostulaciones().stream()
+            .filter(p -> p.getEstado().esAceptada())
+            .map(Postulacion::getUsuario)
+            .toList();
+        scrim.ejecutarMatchmaking(aceptados);
         
         // ============ PATRÓN COMMAND - Operaciones reversibles ============
         System.out.println("┌─ PATRÓN COMMAND: Acciones reversibles ──────────────────────────┐");
@@ -140,7 +145,8 @@ public class DemoCompleta {
         invoker.ejecutar(new AsignarRolCommand(jugador2, "Support"));
         
         // Intercambiar jugadores
-        invoker.ejecutar(new SwapJugadoresCommand(jugador1, jugador3));
+        Usuario jugadorEquipoB = scrim.getEquipoB().getJugadores().get(0);
+        invoker.ejecutar(new SwapJugadoresCommand(jugador1, jugadorEquipoB));
         
         // Deshacer
         System.out.println("\nDeshaciendo último comando...");
@@ -171,7 +177,7 @@ public class DemoCompleta {
         System.out.println("\n┌─ PATRÓN STATE: Confirmación de participantes ──────────────────┐");
         
         for (Postulacion p : scrim.getPostulaciones()) {
-            if (p.getEstado() == EstadoPostulacion.ACEPTADA) {
+            if (p.getEstado().esAceptada()) {
                 scrim.confirmar(p.getUsuario());
                 System.out.println("✓ " + p.getUsuario().getUsername() + " confirmó");
             }
@@ -216,7 +222,7 @@ public class DemoCompleta {
         System.out.println("\n┌─ PATRÓN OBSERVER: Sistema de eventos ───────────────────────────┐");
         
         System.out.println("Publicando evento...");
-        eventBus.publish(new ScrimStateChangedEvent(scrim.getId(), "Finalizado"));
+        eventBus.publish(new ScrimStateChangedEvent(scrim.getId(), "En Juego", "Finalizado"));
         System.out.println("✓ Evento publicado a suscriptores\n");
         
         // ============ RESUMEN FINAL ============

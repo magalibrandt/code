@@ -7,7 +7,19 @@ if not exist out mkdir out
 
 REM Compilar todos los archivos Java
 echo Compilando archivos Java...
-javac -d out -sourcepath src\main\java src\main\java\com\escrims\Main.java src\main\java\com\escrims\application\*.java src\main\java\com\escrims\application\builder\*.java src\main\java\com\escrims\domain\model\*.java src\main\java\com\escrims\domain\state\*.java src\main\java\com\escrims\domain\strategy\*.java src\main\java\com\escrims\domain\events\*.java src\main\java\com\escrims\infrastructure\notifications\*.java
+javac -d out -sourcepath src\main\java ^
+src\main\java\com\escrims\*.java ^
+src\main\java\com\escrims\application\*.java ^
+src\main\java\com\escrims\application\builder\*.java ^
+src\main\java\com\escrims\domain\command\*.java ^
+src\main\java\com\escrims\domain\events\*.java ^
+src\main\java\com\escrims\domain\model\*.java ^
+src\main\java\com\escrims\domain\moderacion\*.java ^
+src\main\java\com\escrims\domain\state\*.java ^
+src\main\java\com\escrims\domain\strategy\*.java ^
+src\main\java\com\escrims\infrastructure\adapters\*.java ^
+src\main\java\com\escrims\infrastructure\notifications\*.java ^
+src\main\java\com\escrims\tests\*.java
 
 if %errorlevel% equ 0 (
     echo Compilacion exitosa!

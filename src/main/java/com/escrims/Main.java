@@ -38,6 +38,8 @@ public class Main {
         Usuario org = facade.crearUsuario("ProPlayer1", "player1@escrims.com", "hash123", "LATAM");
         Usuario p1 = facade.crearUsuario("ProPlayer2", "player2@escrims.com", "hash456", "LATAM");
         Usuario p2 = facade.crearUsuario("ProPlayer3", "player3@escrims.com", "hash789", "LATAM");
+        p1.agregarRango("Valorant", "Gold");
+        p2.agregarRango("Valorant", "Platinum");
         System.out.println("✓ Usuarios creados: " + org.getUsername() + ", " + 
                           p1.getUsername() + ", " + p2.getUsername() + "\n");
         
@@ -69,6 +71,7 @@ public class Main {
         // Simular más postulaciones para llenar cupos
         for (int i = 3; i <= 6; i++) {
             Usuario u = facade.crearUsuario("Player" + i, "player" + i + "@test.com", "hash", "LATAM");
+            u.agregarRango("Valorant", "Gold");
             facade.postularseAScrim(scrim.getId(), u.getId(), "Support");
         }
         System.out.println("   ✓ Estado después de llenar cupos: " + scrim.getNombreEstado() + "\n");
@@ -79,7 +82,7 @@ public class Main {
         
         // Confirmar cada participante
         for (Postulacion post : scrim.getPostulaciones()) {
-            if (post.getEstado() == EstadoPostulacion.ACEPTADA) {
+            if (post.getEstado().esAceptada()) {
                 try {
                     System.out.println("   → Confirmando: " + post.getUsuario().getUsername());
                     facade.confirmarParticipacion(scrim.getId(), post.getUsuario().getId());
@@ -125,7 +128,7 @@ public class Main {
         
         // COMMAND PATTERN - Operaciones reversibles (usando scrim2)
         System.out.println("9. Demostrando patrones adicionales (Command, Chain of Responsibility, Adapter)...");
-        facade.asignarRol(scrim2.getId(), p1.getId(), "Duelist");
+        facade.asignarRol(scrim.getId(), p1.getId(), "Duelist");
         System.out.println("   ✓ Rol asignado (reversible con undo)");
         
         facade.enviarMensajeDiscord("escrims", "¡Scrim completado con éxito!");
