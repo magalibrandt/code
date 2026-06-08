@@ -1,4 +1,4 @@
-package com.escrims.application;
+package com.escrims.application.subscribers;
 
 import com.escrims.domain.events.*;
 import com.escrims.domain.model.*;

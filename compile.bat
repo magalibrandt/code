@@ -9,8 +9,11 @@ REM Compilar todos los archivos Java
 echo Compilando archivos Java...
 javac -d out -sourcepath src\main\java ^
 src\main\java\com\escrims\*.java ^
-src\main\java\com\escrims\application\*.java ^
 src\main\java\com\escrims\application\builder\*.java ^
+src\main\java\com\escrims\application\controller\*.java ^
+src\main\java\com\escrims\application\facade\*.java ^
+src\main\java\com\escrims\application\service\*.java ^
+src\main\java\com\escrims\application\subscribers\*.java ^
 src\main\java\com\escrims\domain\command\*.java ^
 src\main\java\com\escrims\domain\events\*.java ^
 src\main\java\com\escrims\domain\model\*.java ^

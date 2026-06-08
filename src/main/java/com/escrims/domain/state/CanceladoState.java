@@ -34,7 +34,7 @@ public class CanceladoState implements ScrimState {
     }
     
     @Override
-    public String getNombreEstado() {
+    public String getNombre() {
         return "Cancelado";
     }
 }

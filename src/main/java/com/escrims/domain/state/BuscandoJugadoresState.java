@@ -59,7 +59,7 @@ public class BuscandoJugadoresState implements ScrimState {
     }
     
     @Override
-    public String getNombreEstado() {
+    public String getNombre() {
         return "Buscando Jugadores";
     }
 }

@@ -1,12 +1,23 @@
 package com.escrims.tests;
 
 import com.escrims.application.builder.ScrimBuilder;
+import com.escrims.application.service.ScrimService;
 import com.escrims.domain.command.AsignarRolCommand;
 import com.escrims.domain.command.CommandInvoker;
+import com.escrims.domain.events.DomainEvent;
+import com.escrims.domain.events.DomainEventBus;
+import com.escrims.domain.events.ScrimStateChangedEvent;
 import com.escrims.domain.model.Postulacion;
+import com.escrims.domain.model.ReporteConducta;
 import com.escrims.domain.model.Scrim;
 import com.escrims.domain.model.Usuario;
+import com.escrims.domain.moderacion.AutomaticProcessor;
+import com.escrims.domain.moderacion.BotProcessor;
+import com.escrims.domain.moderacion.HumanModeratorProcessor;
+import com.escrims.domain.moderacion.ReportProcessor;
+import com.escrims.domain.events.Subscriber;
 import com.escrims.domain.strategy.ByMMRStrategy;
+import com.escrims.domain.strategy.ByLatencyStrategy;
 import com.escrims.domain.strategy.MatchmakingStrategy;
 import com.escrims.infrastructure.notifications.DevNotifierFactory;
 import com.escrims.infrastructure.notifications.Notifier;
@@ -89,7 +100,7 @@ public class PatternTests {
     public static void testBuilderPattern() {
         Usuario organizador = new Usuario("Org", "org@test.com", "hash", "LATAM");
 
-        Scrim scrim = new ScrimBuilder("Valorant", "5v5", "LATAM", organizador)
+        Scrim scrim = new ScrimBuilder(organizador, "Valorant", "5v5", "LATAM")
             .conRangos("Gold", "Platinum")
             .conLatenciaMaxima(80)
             .conFechaHora(LocalDateTime.now().plusHours(2))
@@ -104,11 +115,64 @@ public class PatternTests {
     public static void testAbstractFactory() {
         NotifierFactory devFactory = new DevNotifierFactory();
         Notifier pushDev = devFactory.createPushNotifier();
+        Notifier emailDev = devFactory.createEmailNotifier();
+        Notifier discordDev = devFactory.createDiscordNotifier();
 
         NotifierFactory prodFactory = new ProdNotifierFactory();
         Notifier pushProd = prodFactory.createPushNotifier();
 
         require(!pushDev.getClass().equals(pushProd.getClass()), "Dev y Prod deben usar implementaciones diferentes");
+        require(pushDev.getChannelName().contains("Push"), "Debe crear notifier push");
+        require(emailDev.getChannelName().contains("Email"), "Debe crear notifier email");
+        require(discordDev.getChannelName().contains("Discord"), "Debe crear notifier discord");
+    }
+
+    public static void testStrategyChangeInService() {
+        ScrimService service = new ScrimService(new ByMMRStrategy());
+        Usuario organizador = new Usuario("Org", "org@test.com", "hash", "LATAM");
+        Scrim scrim = service.crearScrim(organizador, "Valorant", "5v5", "LATAM");
+        scrim.setCuposTotales(1);
+        scrim.setLatenciaMax(80);
+
+        Usuario jugador = new Usuario("Player", "p@test.com", "hash", "LATAM");
+        jugador.agregarRango("Valorant", "Gold");
+
+        List<Usuario> porMmr = service.emparejarJugadores(scrim, List.of(jugador));
+        service.setMatchmakingStrategy(new ByLatencyStrategy());
+        List<Usuario> porLatencia = service.emparejarJugadores(scrim, List.of(jugador));
+
+        require(porMmr.size() == 1, "Estrategia MMR debe seleccionar jugador");
+        require(porLatencia.size() == 1, "Estrategia latencia debe seleccionar jugador");
+    }
+
+    public static void testDomainEventBus() {
+        DomainEventBus bus = DomainEventBus.getInstance();
+        bus.clearSubscribers();
+        CountingSubscriber subscriber = new CountingSubscriber();
+        bus.subscribe(subscriber);
+        bus.publish(new ScrimStateChangedEvent(java.util.UUID.randomUUID(), "A", "B"));
+
+        require(subscriber.count == 1, "EventBus debe publicar a suscriptores");
+        require(subscriber.lastEvent instanceof ScrimStateChangedEvent, "Debe entregar el evento publicado");
+        bus.clearSubscribers();
+    }
+
+    public static void testReportProcessorChain() {
+        Usuario organizador = new Usuario("Org", "org@test.com", "hash", "LATAM");
+        Usuario reportador = new Usuario("Reporter", "r@test.com", "hash", "LATAM");
+        Usuario reportado = new Usuario("Reported", "d@test.com", "hash", "LATAM");
+        Scrim scrim = new Scrim(organizador, "Valorant", "5v5", "LATAM");
+        ReporteConducta reporte = new ReporteConducta(scrim, reportador, reportado, "LENGUAJE_OFENSIVO", "insultos");
+
+        ReportProcessor auto = new AutomaticProcessor();
+        ReportProcessor bot = new BotProcessor();
+        ReportProcessor human = new HumanModeratorProcessor();
+        auto.setSiguiente(bot);
+        bot.setSiguiente(human);
+        auto.procesarReporte(reporte);
+
+        require(reporte.getEstado().esResuelto(), "La cadena debe resolver el reporte");
+        require(reporte.getSancion() != null, "La cadena debe asignar sancion");
     }
 
     public static void testUsuarioValidation() {
@@ -145,9 +209,28 @@ public class PatternTests {
         testCommandPattern();
         testBuilderPattern();
         testAbstractFactory();
+        testStrategyChangeInService();
+        testDomainEventBus();
+        testReportProcessorChain();
         testUsuarioValidation();
         testStrikeSystem();
         System.out.println("TODOS LOS TESTS PASARON");
+    }
+
+    private static class CountingSubscriber implements Subscriber {
+        private int count;
+        private DomainEvent lastEvent;
+
+        @Override
+        public void onEvent(DomainEvent event) {
+            count++;
+            lastEvent = event;
+        }
+
+        @Override
+        public String getSubscriberName() {
+            return "CountingSubscriber";
+        }
     }
 
     private static void require(boolean condition, String message) {

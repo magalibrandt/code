@@ -38,7 +38,7 @@ public class EnJuegoState implements ScrimState {
     }
     
     @Override
-    public String getNombreEstado() {
+    public String getNombre() {
         return "En Juego";
     }
 }

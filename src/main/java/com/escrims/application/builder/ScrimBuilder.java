@@ -11,8 +11,12 @@ import java.time.LocalDateTime;
 public class ScrimBuilder {
     private Scrim scrim;
     
+    public ScrimBuilder(Usuario creador, String juego, String formato, String region) {
+        this.scrim = new Scrim(creador, juego, formato, region);
+    }
+
     public ScrimBuilder(String juego, String formato, String region, Usuario creador) {
-        this.scrim = new Scrim(juego, formato, region, creador);
+        this(creador, juego, formato, region);
     }
     
     public ScrimBuilder conRangos(String rangoMin, String rangoMax) {
@@ -33,6 +37,9 @@ public class ScrimBuilder {
     }
     
     public ScrimBuilder conFechaHora(LocalDateTime fechaHora) {
+        if (fechaHora == null) {
+            throw new IllegalArgumentException("La fecha y hora no puede ser nula");
+        }
         if (fechaHora.isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("La fecha no puede ser en el pasado");
         }

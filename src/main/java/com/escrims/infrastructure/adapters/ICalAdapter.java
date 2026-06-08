@@ -12,6 +12,10 @@ public class ICalAdapter implements ExternalServiceAdapter {
     private String calendarColor;
     private boolean conectado;
     
+    public ICalAdapter() {
+        this("eScrims Calendar");
+    }
+
     public ICalAdapter(String calendarName) {
         this.calendarName = calendarName;
         this.calendarColor = "#4285F4"; // Azul por defecto
@@ -59,9 +63,10 @@ public class ICalAdapter implements ExternalServiceAdapter {
         return ics.toString();
     }
     
-    public void exportarEvento(String titulo, LocalDateTime inicio, int duracionMinutos) {
+    public String exportarEvento(String titulo, LocalDateTime inicio, int duracionMinutos) {
         String ics = generarEventoICS(titulo, inicio, duracionMinutos, "Scrim eSports");
         System.out.println("[ICAL] Evento listo para exportar a calendario");
+        return ics;
     }
     
     @Override

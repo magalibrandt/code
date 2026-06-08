@@ -11,13 +11,13 @@ import java.util.List;
  */
 public class CommandInvoker {
     private Stack<ScrimCommand> comandosEjecutados;
-    private Stack<ScrimCommand> comandosDeshechados;
+    private Stack<ScrimCommand> comandosDeshechos;
     private Scrim scrim;
     
     public CommandInvoker(Scrim scrim) {
         this.scrim = scrim;
         this.comandosEjecutados = new Stack<>();
-        this.comandosDeshechados = new Stack<>();
+        this.comandosDeshechos = new Stack<>();
     }
     
     /**
@@ -27,7 +27,7 @@ public class CommandInvoker {
         comando.execute(scrim);
         comandosEjecutados.push(comando);
         // Limpiar historial de rehacer al ejecutar nuevo comando
-        comandosDeshechados.clear();
+        comandosDeshechos.clear();
         System.out.println("[COMMAND] Ejecutado: " + comando.getDescription());
     }
     
@@ -38,7 +38,7 @@ public class CommandInvoker {
         if (!comandosEjecutados.isEmpty()) {
             ScrimCommand comando = comandosEjecutados.pop();
             comando.undo(scrim);
-            comandosDeshechados.push(comando);
+            comandosDeshechos.push(comando);
             System.out.println("[COMMAND] Deshecho: " + comando.getDescription());
         }
     }
@@ -47,8 +47,8 @@ public class CommandInvoker {
      * Rehace el último comando deshecho.
      */
     public void rehacer() {
-        if (!comandosDeshechados.isEmpty()) {
-            ScrimCommand comando = comandosDeshechados.pop();
+        if (!comandosDeshechos.isEmpty()) {
+            ScrimCommand comando = comandosDeshechos.pop();
             comando.execute(scrim);
             comandosEjecutados.push(comando);
             System.out.println("[COMMAND] Rehecho: " + comando.getDescription());
@@ -71,6 +71,6 @@ public class CommandInvoker {
      */
     public void limpiarHistorial() {
         comandosEjecutados.clear();
-        comandosDeshechados.clear();
+        comandosDeshechos.clear();
     }
 }

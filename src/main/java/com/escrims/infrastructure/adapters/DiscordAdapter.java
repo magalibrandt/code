@@ -9,6 +9,10 @@ public class DiscordAdapter implements ExternalServiceAdapter {
     private String botToken;
     private boolean conectado;
     
+    public DiscordAdapter(String webhookUrl) {
+        this(webhookUrl, "");
+    }
+
     public DiscordAdapter(String webhookUrl, String botToken) {
         this.webhookUrl = webhookUrl;
         this.botToken = botToken;

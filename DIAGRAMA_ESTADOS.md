@@ -1,233 +1,66 @@
 # Diagrama de Estados - Scrim
 
-## Nota de implementacion
+## Nota de Alcance
 
-El ciclo de vida de `Scrim` usa el patron State con clases concretas en `domain.state`. Los estados de `Postulacion` y `ReporteConducta` se representan con las clases de dominio `EstadoPostulacion` y `EstadoReporte`.
+Algunas transiciones automaticas por scheduler, timeouts, reembolsos y penalidades estan documentadas como reglas de negocio previstas, pero en esta version se simulan o no estan implementadas completamente.
 
-## Descripción
+La implementacion real usa el patron State: `Scrim` es el contexto y delega en `ScrimState`, ubicado en `domain.state`.
 
-El ciclo de vida de un Scrim sigue un patrón de máquina de estados con 6 estados posibles y transiciones claramente definidas.
+## Estados Implementados
 
-## Estados
+### 1. Buscando Jugadores
 
-### 1. BUSCANDO JUGADORES
-- **Descripción**: Estado inicial cuando se crea el scrim
-- **Acciones Permitidas**:
-  - `postular(usuario, rol)` → Crea postulación
-  - `cancelar()` → Transición a CANCELADO
-- **Transiciones Automáticas**:
-  - Si postulaciones.size() == cuposTotales → LOBBY_ARMADO
-- **Timeout**: Cancelación automática si pasan 24 horas sin cambios
+Estado inicial de un scrim.
 
-### 2. LOBBY ARMADO
-- **Descripción**: Se alcanzó el cupo, esperando confirmaciones
-- **Acciones Permitidas**:
-  - `confirmar(usuario)` → Registra confirmación
-  - `cancelar()` → Transición a CANCELADO
-  - `removeUsuario(usuario)` → Vuelve a BUSCANDO_JUGADORES
-- **Transiciones Automáticas**:
-  - Si confirmaciones.size() == cuposTotales → CONFIRMADO
-- **Timeout**: 30 minutos para confirmar, si vence → CANCELADO
+Acciones implementadas:
+- `postular(usuario, rolDeseado)`: crea una postulacion aceptada.
+- `cancelar()`: transiciona a `CanceladoState`.
 
-### 3. CONFIRMADO
-- **Descripción**: Todos confirmaron, esperando hora de inicio
-- **Acciones Permitidas**:
-  - `cancelar()` → Transición a CANCELADO
-  - `iniciar()` (manual) → Transición a EN_JUEGO
-- **Transiciones Automáticas**:
-  - Si fecha/hora alcanzada → EN_JUEGO (scheduler)
-- **Timeout**: 5 minutos antes de hora → notificar
+Transicion implementada:
+- Cuando el cupo se completa, pasa a `LobbyArmadoState`.
 
-### 4. EN JUEGO
-- **Descripción**: El scrim está en progreso
-- **Acciones Permitidas**:
-  - `finalizar()` → Transición a FINALIZADO
-- **Transiciones Automáticas**:
-  - Si fechaHora + duracion alcanzada → FINALIZADO
-- **Timeout**: Duración estimada del scrim
+### 2. Lobby Armado
 
-### 5. FINALIZADO
-- **Descripción**: Scrim concluido, cargando estadísticas
-- **Acciones Permitidas**:
-  - `cargarEstadisticas(stats)`
-  - `cargarFeedback(usuario, rating, comentario)`
-- **No hay Transiciones**:
-  - Este es un estado terminal
-  - Se pueden seguir cargando datos después
+El cupo esta completo y se esperan confirmaciones.
 
-### 6. CANCELADO
-- **Descripción**: Scrim fue cancelado
-- **Razones Posibles**:
-  - Organizador canceló manualmente
-  - No hubo suficientes postulaciones en 24h
-  - No todos confirmaron en el tiempo límite
-  - Timeout por inactividad
-- **No hay Transiciones**:
-  - Este es un estado terminal
-  - Se procesan reembolsos si aplica
-  - Se registran strikes si aplica
+Acciones implementadas:
+- `confirmar(usuario)`: registra confirmacion.
+- `cancelar()`: transiciona a `CanceladoState`.
 
-## Transiciones Visuales (ASCII)
+Transicion implementada:
+- Cuando todos confirman, pasa a `ConfirmadoState`.
 
-```
-                                    ┌──────────────────────────────────┐
-                                    │                                  │
-                                    │  [BUSCANDO_JUGADORES]            │
-                                    │  (Estado Inicial)                 │
-                                    │                                  │
-                                    └────────┬──────────────────────────┘
-                                             │
-                        (cupo completo)      │      (cancelar)
-                        [postulaciones       │      [cancelar()]
-                         == cupos]           │
-                                             │
-                                    ┌────────▼─────────┐
-                                    │                  │
-                                    │ [LOBBY_ARMADO]   │◄──── (remove usuario)
-                                    │ (Espera confirm) │      (vuelve a buscar)
-                                    │                  │
-                                    └────────┬─────────┘
-                                             │
-                        (todos confirman)    │      (cancelar)
-                        [confirmaciones      │      [cancelar()]
-                         == cupos]           │
-                                             │
-                                    ┌────────▼──────────┐
-                                    │                   │
-                                    │ [CONFIRMADO]      │
-                                    │ (Espera inicio)   │
-                                    │                   │
-                                    └────────┬──────────┘
-                                             │
-                        (hora alcanzada)     │      (cancelar manual)
-                        [scheduler]          │      [cancelar()]
-                                             │
-                                    ┌────────▼────────┐
-                                    │                 │
-                                    │ [EN_JUEGO]      │
-                                    │ (En progreso)   │
-                                    │                 │
-                                    └────────┬────────┘
-                                             │
-                        (tiempo finalizado)  │
-                        [scheduler]          │
-                                             │
-                                    ┌────────▼──────────────┐
-                                    │                       │
-                                    │ [FINALIZADO]          │◄─────┐
-                                    │ (Terminal)            │      │
-                                    │ (Cargar estadísticas) │      │
-                                    │                       │      │
-                                    └───────────────────────┘      │
-                                                                   │
-                                          ┌─────────────────────────┘
-                                          │
-                                    ┌─────▼──────────────┐
-                                    │                    │
-                                    │ [CANCELADO]        │
-                                    │ (Terminal)         │
-                                    │ (Procesar sanciones│
-                                    │  y reembolsos)     │
-                                    │                    │
-                                    └────────────────────┘
-```
+### 3. Confirmado
 
-## Matriz de Transiciones
+Todos los participantes confirmaron.
 
-| Estado Actual | Acción | Condición | Nuevo Estado |
-|---|---|---|---|
-| BUSCANDO | postular | usuario válido | BUSCANDO |
-| BUSCANDO | postular | cupo completo | LOBBY_ARMADO |
-| BUSCANDO | cancelar | siempre | CANCELADO |
-| BUSCANDO | timeout | 24h sin cambios | CANCELADO |
-| LOBBY_ARMADO | confirmar | usuario válido | LOBBY_ARMADO |
-| LOBBY_ARMADO | confirmar | todos confirmaron | CONFIRMADO |
-| LOBBY_ARMADO | cancelar | siempre | CANCELADO |
-| LOBBY_ARMADO | timeout | 30min sin confirmaciones | CANCELADO |
-| CONFIRMADO | iniciar | manual o automático | EN_JUEGO |
-| CONFIRMADO | cancelar | < 5min antes | CANCELADO |
-| EN_JUEGO | finalizar | manual | FINALIZADO |
-| EN_JUEGO | timeout | duración alcanzada | FINALIZADO |
-| FINALIZADO | - | estado terminal | - |
-| CANCELADO | - | estado terminal | - |
+Acciones implementadas:
+- `iniciar()`: transiciona a `EnJuegoState`.
+- `cancelar()`: transiciona a `CanceladoState`.
 
-## Reglas de Negocio por Estado
+Nota: el inicio automatico por scheduler esta documentado como regla prevista, pero no existe scheduler productivo en esta version.
 
-### BUSCANDO_JUGADORES
-- ✅ Nuevos usuarios pueden postularse
-- ✅ Organizador puede cancelar
-- ✅ Sistema notifica cambios a usuarios interesados
-- ❌ No se puede confirmar
-- ❌ No se puede iniciar
+### 4. En Juego
 
-### LOBBY_ARMADO
-- ✅ Usuarios pueden confirmar participación
-- ✅ Organizador puede reemplazar un jugador (vuelve a BUSCANDO)
-- ✅ Sistema envía reminder de confirmación cada 5 min
-- ❌ Nuevos usuarios no pueden postularse
-- ❌ No se puede iniciar
+El scrim esta en progreso.
 
-### CONFIRMADO
-- ✅ Sistema prepara transición a EN_JUEGO
-- ✅ Sistema envía recordatorios (1h antes, 15min, 5min)
-- ❌ Nuevos usuarios no pueden unirse
-- ❌ Usuarios confirmados pueden abandonar (reciben strike)
+Acciones implementadas:
+- `finalizar()`: transiciona a `FinalizadoState`.
 
-### EN_JUEGO
-- ✅ Sistema registra inicio
-- ✅ Sistema bloquea cambios
-- ❌ No se acepta sin usuarios abandonan
-- ❌ No se pueden hacer cambios
+Nota: la finalizacion automatica por duracion estimada esta documentada como regla prevista.
 
-### FINALIZADO
-- ✅ Sistema habilita carga de estadísticas
-- ✅ Usuarios pueden calificar compañeros
-- ✅ Sistema calcula cambios de MMR
-- ❌ No se puede volver a otros estados
+### 5. Finalizado
 
-### CANCELADO
-- ✅ Sistema procesa reembolsos (si aplica)
-- ✅ Sistema aplica strikes si corresponde
-- ✅ Se notifica a todos participantes
-- ❌ No se puede reactivar
+Estado terminal. Permite registrar estadisticas desde el flujo de aplicacion, pero no vuelve a estados anteriores.
 
-## Eventos Publicados por Transición
+### 6. Cancelado
 
-```
-BUSCANDO → LOBBY_ARMADO
-  ↓
-  Evento: ScrimStateChangedEvent(id, "LobbyArmado")
-  Listeners: NotificationSubscriber
-  Action: Enviar notificación "¡Lobby completado!"
+Estado terminal. Reembolsos, penalidades y timeouts se documentan como reglas previstas o simuladas, no como integraciones productivas.
 
-LOBBY_ARMADO → CONFIRMADO
-  ↓
-  Evento: ScrimStateChangedEvent(id, "Confirmado")
-  Listeners: NotificationSubscriber
-  Action: Enviar notificación "Todos confirmaron"
+## Estados Concretos
 
-CONFIRMADO → EN_JUEGO
-  ↓
-  Evento: ScrimStateChangedEvent(id, "EnJuego")
-  Listeners: NotificationSubscriber
-  Action: Enviar notificación "¡Scrim iniciado!"
+Cada estado implementa `ScrimState`:
 
-EN_JUEGO → FINALIZADO
-  ↓
-  Evento: ScrimStateChangedEvent(id, "Finalizado")
-  Listeners: NotificationSubscriber
-  Action: Enviar notificación "Scrim finalizado"
-
-* → CANCELADO
-  ↓
-  Evento: ScrimStateChangedEvent(id, "Cancelado")
-  Listeners: NotificationSubscriber
-  Action: Enviar notificación "Scrim cancelado"
-```
-
-## Implementación
-
-Cada estado es una clase que implementa `ScrimState`:
 - `BuscandoJugadoresState`
 - `LobbyArmadoState`
 - `ConfirmadoState`
@@ -235,11 +68,11 @@ Cada estado es una clase que implementa `ScrimState`:
 - `FinalizadoState`
 - `CanceladoState`
 
-El contexto (`Scrim`) delega las operaciones al estado actual:
+`Scrim` delega:
 
 ```java
-public void postular(Usuario usuario, String rol) {
-    estado.postular(this, usuario, rol);
+public void postular(Usuario usuario, String rolDeseado) {
+    estado.postular(this, usuario, rolDeseado);
 }
 
 public void confirmar(Usuario usuario) {
@@ -247,4 +80,50 @@ public void confirmar(Usuario usuario) {
 }
 ```
 
-Cada estado implementa estas operaciones de forma diferente según sus reglas.
+## Transiciones Principales
+
+| Estado actual | Accion o condicion | Nuevo estado | Implementacion |
+|---|---|---|---|
+| Buscando Jugadores | `postular` sin completar cupo | Buscando Jugadores | Implementado |
+| Buscando Jugadores | cupo completo | Lobby Armado | Implementado |
+| Buscando Jugadores | `cancelar` | Cancelado | Implementado |
+| Lobby Armado | `confirmar` sin completar confirmaciones | Lobby Armado | Implementado |
+| Lobby Armado | todos confirmaron | Confirmado | Implementado |
+| Lobby Armado | `cancelar` | Cancelado | Implementado |
+| Confirmado | `iniciar` | En Juego | Implementado |
+| Confirmado | scheduler por fecha/hora | En Juego | Previsto/simulado |
+| Confirmado | `cancelar` | Cancelado | Implementado |
+| En Juego | `finalizar` | Finalizado | Implementado |
+| En Juego | timeout por duracion | Finalizado | Previsto/simulado |
+| Finalizado | - | Terminal | Implementado |
+| Cancelado | - | Terminal | Implementado |
+
+## Eventos y Notificaciones
+
+Las transiciones publican `ScrimStateChangedEvent`. Las postulaciones aceptadas publican `PostulacionAceptadaEvent`.
+
+El flujo de notificacion es:
+
+```text
+Scrim / State
+  -> DomainEventBus
+  -> NotificationSubscriber
+  -> NotifierFactory
+  -> Notifier
+```
+
+`DomainEventBus` y `Subscriber` estan en `domain.events`. `NotificationSubscriber` esta en `application.subscribers`.
+
+Las notificaciones reales se simulan por consola.
+
+## Reglas Previstas
+
+Las siguientes reglas se conservan como documentacion de negocio futura o simulada:
+
+- Cancelacion automatica por inactividad.
+- Recordatorios por scheduler.
+- Transicion automatica por fecha/hora.
+- Reembolsos.
+- Penalidades por abandono o cancelacion tardia.
+- Calculo de MMR posterior al scrim.
+

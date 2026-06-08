@@ -1,4 +1,4 @@
-package com.escrims.application;
+package com.escrims.application.service;
 
 import com.escrims.domain.model.*;
 import com.escrims.domain.moderacion.*;
@@ -32,14 +32,18 @@ public class ScrimService {
                            int latenciaMax, LocalDateTime fechaHora, 
                            int cuposTotales, String modalidad) {
         
-        Scrim scrim = new Scrim(juego, formato, region, creador);
+        Scrim scrim = crearScrim(creador, juego, formato, region);
         scrim.setRangoMin(rangoMin);
         scrim.setRangoMax(rangoMax);
         scrim.setLatenciaMax(latenciaMax);
         scrim.setFechaHora(fechaHora);
         scrim.setCuposTotales(cuposTotales);
         scrim.setModalidad(modalidad);
-        
+        return scrim;
+    }
+
+    public Scrim crearScrim(Usuario creador, String juego, String formato, String region) {
+        Scrim scrim = new Scrim(creador, juego, formato, region);
         scrimRepository.put(scrim.getId(), scrim);
         return scrim;
     }
@@ -76,6 +80,27 @@ public class ScrimService {
         }
     }
     
+    public void postularseAScrim(UUID scrimId, UUID usuarioId, String rolDeseado) {
+        Usuario usuario = usuarioRepository.get(usuarioId);
+        if (usuario == null) {
+            throw new IllegalArgumentException("Usuario no encontrado");
+        }
+        postularseAScrim(scrimId, usuario, rolDeseado);
+    }
+
+    public void emparejarYArmarLobby(UUID scrimId) {
+        Scrim scrim = scrimRepository.get(scrimId);
+        if (scrim == null) {
+            throw new IllegalArgumentException("Scrim no encontrado");
+        }
+        List<Usuario> postulados = scrim.getPostulaciones().stream()
+            .filter(p -> p.getEstado().esAceptada())
+            .map(Postulacion::getUsuario)
+            .toList();
+        List<Usuario> seleccionados = matchmakingStrategy.seleccionar(postulados, scrim);
+        scrim.ejecutarMatchmaking(seleccionados);
+    }
+
     /**
      * CU5 - Emparejar jugadores
      * Aplica GRASP Expert: usa Strategy para delegar el algoritmo
@@ -96,6 +121,14 @@ public class ScrimService {
         scrim.confirmar(usuario);
     }
     
+    public void confirmarParticipacion(UUID scrimId, UUID usuarioId) {
+        Usuario usuario = usuarioRepository.get(usuarioId);
+        if (usuario == null) {
+            throw new IllegalArgumentException("Usuario no encontrado");
+        }
+        confirmarParticipacion(scrimId, usuario);
+    }
+
     /**
      * CU7 - Iniciar Scrim
      */
@@ -121,6 +154,14 @@ public class ScrimService {
         scrim.setEstadistica(estadistica);
     }
     
+    public void finalizarScrim(UUID scrimId) {
+        Scrim scrim = scrimRepository.get(scrimId);
+        if (scrim == null) {
+            throw new IllegalArgumentException("Scrim no encontrado");
+        }
+        finalizarScrim(scrimId, new Estadistica(scrim));
+    }
+
     /**
      * CU9 - Cancelar Scrim
      */
@@ -212,8 +253,8 @@ public class ScrimService {
             .filter(s -> juego == null || s.getJuego().equalsIgnoreCase(juego))
             .filter(s -> formato == null || s.getFormato().equalsIgnoreCase(formato))
             .filter(s -> region == null || s.getRegion().equalsIgnoreCase(region))
-            .filter(s -> rangoMin == null || s.getRangoMin().equalsIgnoreCase(rangoMin))
-            .filter(s -> rangoMax == null || s.getRangoMax().equalsIgnoreCase(rangoMax))
+            .filter(s -> rangoMin == null || (s.getRangoMin() != null && s.getRangoMin().equalsIgnoreCase(rangoMin)))
+            .filter(s -> rangoMax == null || (s.getRangoMax() != null && s.getRangoMax().equalsIgnoreCase(rangoMax)))
             .filter(s -> s.getLatenciaMax() >= latenciaMax)
             .filter(s -> s.getNombreEstado().equals("Buscando Jugadores"))
             .collect(Collectors.toList());

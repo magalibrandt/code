@@ -7,7 +7,8 @@ import com.escrims.domain.command.*;
 import com.escrims.domain.moderacion.*;
 import com.escrims.infrastructure.notifications.*;
 import com.escrims.infrastructure.adapters.*;
-import com.escrims.application.*;
+import com.escrims.application.service.ScrimService;
+import com.escrims.application.subscribers.NotificationSubscriber;
 import com.escrims.application.builder.ScrimBuilder;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -16,6 +17,8 @@ import java.util.*;
  * Demostración completa de todos los patrones de diseño
  * y funcionalidades del sistema eScrims.
  */
+// Esta clase es demostrativa e instancia algunos subsistemas directamente para mostrar los patrones en ejecucion.
+// No representa necesariamente el flujo limpio de uso de la aplicacion, que debe pasar por EscrimsFacade y servicios de aplicacion.
 public class DemoCompleta {
     public static void main(String[] args) {
         System.out.println("╔════════════════════════════════════════════════════════════════╗");

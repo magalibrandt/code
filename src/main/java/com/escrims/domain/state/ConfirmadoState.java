@@ -41,7 +41,7 @@ public class ConfirmadoState implements ScrimState {
     }
     
     @Override
-    public String getNombreEstado() {
+    public String getNombre() {
         return "Confirmado";
     }
 }

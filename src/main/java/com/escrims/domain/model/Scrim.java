@@ -148,6 +148,6 @@ public class Scrim {
     }
     
     public String getNombreEstado() {
-        return estado.getNombreEstado();
+        return estado.getNombre();
     }
 }

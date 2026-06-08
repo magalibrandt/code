@@ -58,7 +58,7 @@ public class LobbyArmadoState implements ScrimState {
     }
     
     @Override
-    public String getNombreEstado() {
+    public String getNombre() {
         return "Lobby Armado";
     }
 }

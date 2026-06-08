@@ -9,5 +9,9 @@ public interface ScrimState {
     void iniciar(Scrim scrim);
     void finalizar(Scrim scrim);
     void cancelar(Scrim scrim);
-    String getNombreEstado();
+    String getNombre();
+
+    default String getNombreEstado() {
+        return getNombre();
+    }
 }

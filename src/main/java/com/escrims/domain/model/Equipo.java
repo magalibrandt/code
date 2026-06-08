@@ -4,21 +4,21 @@ import java.util.*;
 
 public class Equipo {
     private UUID id;
-    private String lado; // "A" o "B"
+    private String nombre;
     private List<Usuario> jugadores;
     private Map<Usuario, String> rolesAsignados;
     
-    public Equipo(String lado) {
+    public Equipo(String nombre) {
         this.id = UUID.randomUUID();
-        this.lado = lado;
+        this.nombre = nombre;
         this.jugadores = new ArrayList<>();
         this.rolesAsignados = new HashMap<>();
     }
     
     // Getters
     public UUID getId() { return id; }
-    public String getLado() { return lado; }
-    public String getNombre() { return lado; }
+    public String getLado() { return nombre; }
+    public String getNombre() { return nombre; }
     public List<Usuario> getJugadores() { return Collections.unmodifiableList(jugadores); }
     public Map<Usuario, String> getRolesAsignados() { return Collections.unmodifiableMap(rolesAsignados); }
     
