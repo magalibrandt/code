@@ -728,7 +728,7 @@ ScrimService "1" ..> "1" ReportProcessor : procesa reportes mediante
 
 ScrimBuilder "1" --> "1" Scrim : construye
 
-Usuario "1" *-- "1" PreferenciasUsuario : posee
+Usuario "1" *-- "1" PreferenciasUsuario
 
 Scrim "1" --> "1" Usuario : fue creado por
 Scrim "1" --> "1" ScrimState : delega comportamiento en
@@ -738,18 +738,17 @@ Scrim "1" *-- "2" Equipo : organiza jugadores en
 Scrim "1" *-- "0..1" Estadistica : registra resultado en
 
 Postulacion "1" --> "1" Usuario : pertenece a
-Postulacion "1" --> "1" Scrim : se realiza sobre
+' Relación inversa Scrim-Postulacion ya representada por la composición anterior.
 Postulacion "1" --> "1" EstadoPostulacion : tiene estado
 
 Confirmacion "1" --> "1" Usuario : confirma a
-Confirmacion "1" --> "1" Scrim : corresponde a
+' Relación inversa Scrim-Confirmacion ya representada por la composición anterior.
 
-Equipo "1" o-- "0..*" Usuario : agrupa
-Equipo "1" --> "0..*" Usuario : asigna roles a
+Equipo "1" o-- "0..*" Usuario : agrupa jugadores / asigna roles
 
-Estadistica "1" --> "1" Scrim : pertenece a
+' Relación inversa Scrim-Estadistica ya representada por la composición anterior.
 Estadistica "1" *-- "0..*" EstadisticaJugador : compone resultados por jugador
-EstadisticaJugador "1" ..> "1" Usuario : describe rendimiento de
+EstadisticaJugador "1" ..> "1" Usuario
 
 ReporteConducta "1" --> "1" Scrim : se origina en
 ReporteConducta "1" --> "1" Usuario : es emitido por
