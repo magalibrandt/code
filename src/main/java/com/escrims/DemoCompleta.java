@@ -91,7 +91,7 @@ public class DemoCompleta {
         System.out.println("  Jugador 3: " + jugador3.getUsername() + "\n");
         
         // ============ PATRÓN BUILDER - Crear Scrim ============
-        System.out.println("┌─ PATRÓN BUILDER: Crear Scrim ──────────────────────────────────┐");
+        System.out.println("┌─ PATRON BUILDER: Crear Scrim ──────────────────────────────────┐");
         
         Scrim scrim = new ScrimBuilder("Valorant", "5v5", "LATAM", organizador)
             .conRangos("Gold", "Platinum")
@@ -109,7 +109,7 @@ public class DemoCompleta {
         System.out.println("  Estado: " + scrim.getNombreEstado() + "\n");
         
         // ============ PATRÓN STATE - Postulaciones y transiciones ============
-        System.out.println("┌─ PATRÓN STATE: Ciclo de vida del Scrim ────────────────────────┐");
+        System.out.println("┌─ PATRON STATE: Ciclo de vida del Scrim ────────────────────────┐");
         System.out.println("Simulando postulaciones y transiciones de estado...\n");
         
         scrim.postular(jugador1, "Duelist");
@@ -139,7 +139,7 @@ public class DemoCompleta {
         scrim.ejecutarMatchmaking(aceptados);
         
         // ============ PATRÓN COMMAND - Operaciones reversibles ============
-        System.out.println("┌─ PATRÓN COMMAND: Acciones reversibles ──────────────────────────┐");
+        System.out.println("┌─ PATRON COMMAND: Acciones reversibles ──────────────────────────┐");
         
         CommandInvoker invoker = new CommandInvoker(scrim);
         
@@ -159,7 +159,7 @@ public class DemoCompleta {
         invoker.obtenerHistorial().forEach(cmd -> System.out.println("  - " + cmd));
         
         // ============ PATRÓN STRATEGY - Cambiar algoritmos ============
-        System.out.println("\n┌─ PATRÓN STRATEGY: Algoritmos intercambiables ───────────────────┐");
+        System.out.println("\n┌─ PATRON STRATEGY: Algoritmos intercambiables ───────────────────┐");
         
         List<Usuario> candidatos = Arrays.asList(jugador1, jugador2, jugador3);
         
@@ -177,7 +177,7 @@ public class DemoCompleta {
         }
         
         // ============ PATRÓN STATE - Confirmaciones ============
-        System.out.println("\n┌─ PATRÓN STATE: Confirmación de participantes ──────────────────┐");
+        System.out.println("\n┌─ PATRON STATE: Confirmación de participantes ──────────────────┐");
         
         for (Postulacion p : scrim.getPostulaciones()) {
             if (p.getEstado().esAceptada()) {
@@ -188,7 +188,7 @@ public class DemoCompleta {
         System.out.println("\nEstado: " + scrim.getNombreEstado() + "\n");
         
         // ============ PATRÓN STATE - Iniciar y Finalizar ============
-        System.out.println("┌─ PATRÓN STATE: Iniciar y Finalizar ────────────────────────────┐");
+        System.out.println("┌─ PATRON STATE: Iniciar y Finalizar ────────────────────────────┐");
         
         scrim.iniciar();
         System.out.println("✓ Scrim iniciado! Estado: " + scrim.getNombreEstado());
@@ -197,7 +197,7 @@ public class DemoCompleta {
         System.out.println("✓ Scrim finalizado! Estado: " + scrim.getNombreEstado() + "\n");
         
         // ============ PATRÓN CHAIN OF RESPONSIBILITY - Moderación ============
-        System.out.println("┌─ PATRÓN CHAIN OF RESPONSIBILITY: Moderación ────────────────────┐");
+        System.out.println("┌─ PATRON CHAIN OF RESPONSIBILITY: Moderación ────────────────────┐");
         
         ReporteConducta reporte = new ReporteConducta(scrim, jugador1, jugador3, "LENGUAJE_OFENSIVO",
             "El jugador usó lenguaje inapropiado durante el scrim");
