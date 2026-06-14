@@ -748,7 +748,7 @@ Equipo "1" o-- "0..*" Usuario : agrupa jugadores / asigna roles
 
 ' Relación inversa Scrim-Estadistica ya representada por la composición anterior.
 Estadistica "1" *-- "0..*" EstadisticaJugador : compone resultados por jugador
-EstadisticaJugador "1" ..> "1" Usuario
+Estadistica "1" --> "0..*" Usuario : registra rendimiento
 
 ReporteConducta "1" --> "1" Scrim : se origina en
 ReporteConducta "1" --> "1" Usuario : es emitido por
