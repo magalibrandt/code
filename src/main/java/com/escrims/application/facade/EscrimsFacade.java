@@ -1,11 +1,12 @@
-package com.escrims.application;
+package com.escrims.application.facade;
 
 import com.escrims.application.builder.ScrimBuilder;
+import com.escrims.application.service.ScrimService;
+import com.escrims.application.subscribers.NotificationSubscriber;
 import com.escrims.domain.command.*;
 import com.escrims.domain.events.*;
 import com.escrims.domain.model.*;
 import com.escrims.domain.strategy.*;
-import com.escrims.infrastructure.adapters.*;
 import com.escrims.infrastructure.notifications.*;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -14,15 +15,14 @@ import java.util.*;
  * PATRÓN FACADE
  * 
  * Interface simplificada que proporciona una fachada unificada al sistema eScrims.
- * 
  * El Facade encapsula la complejidad de múltiples subsistemas:
  * - ScrimService (gestión de scrims)
  * - DomainEventBus (eventos)
  * - CommandInvoker (comandos)
  * - ReportProcessor (moderación)
- * - Notificadores (multi-canal)
- * - Adaptadores (integraciones)
- * 
+ * - NotificationSubscriber (suscripción a eventos)
+ * - NotifierFactory (creación de notificadores multi-canal)
+ *
  * Beneficios:
  * - Interfaz simple y unificada
  * - Clientes no necesitan conocer complejidad interna
@@ -33,13 +33,7 @@ public class EscrimsFacade {
     private ScrimService scrimService;
     private DomainEventBus eventBus;
     private NotificationSubscriber notificationSubscriber;
-    private CommandInvoker commandInvoker;
     private NotifierFactory notifierFactory;
-    
-    // Adaptadores
-    private DiscordAdapter discordAdapter;
-    private SendGridAdapter sendgridAdapter;
-    private ICalAdapter icalAdapter;
     
     public EscrimsFacade() {
         this(new ByMMRStrategy());
@@ -54,11 +48,6 @@ public class EscrimsFacade {
         
         // Suscribir al event bus
         this.eventBus.subscribe(notificationSubscriber);
-        
-        // Inicializar adaptadores
-        this.discordAdapter = new DiscordAdapter("webhook_url", "bot_token");
-        this.sendgridAdapter = new SendGridAdapter("api_key", "noreply@escrims.com");
-        this.icalAdapter = new ICalAdapter("eScrims Calendar");
     }
     
     // ============ OPERACIONES DE USUARIO ============
@@ -105,6 +94,24 @@ public class EscrimsFacade {
         scrimService.getScrimRepository().put(scrim.getId(), scrim);
         notificationSubscriber.registrarScrim(scrim);
         return scrim;
+    }
+
+    public Scrim crearScrim(UUID creadorId, String juego, String formato, String region) {
+        Usuario creador = scrimService.getUsuarioRepository().get(creadorId);
+        if (creador == null) {
+            throw new IllegalArgumentException("Usuario creador no encontrado");
+        }
+        Scrim scrim = scrimService.crearScrim(creador, juego, formato, region);
+        notificationSubscriber.registrarScrim(scrim);
+        return scrim;
+    }
+
+    public List<Scrim> buscarScrims() {
+        return new ArrayList<>(scrimService.getScrimRepository().values());
+    }
+
+    public void reportarConductaInapropiada(UUID scrimId, UUID reportadorId, UUID reportadoId, String motivo) {
+        reportarConductaInapropiada(scrimId, reportadorId, reportadoId, motivo, "");
     }
     
     /**
@@ -273,50 +280,6 @@ public class EscrimsFacade {
         sanciones.put("sancionado", usuario.estaBajoSancion());
         sanciones.put("cooldownHasta", usuario.getCooldownHasta());
         return sanciones;
-    }
-    
-    // ============ INTEGRACIONES EXTERNAS ============
-    
-    /**
-     * Conecta con Discord.
-     */
-    public void conectarDiscord() {
-        discordAdapter.conectar();
-    }
-    
-    /**
-     * Envía mensaje a Discord.
-     */
-    public void enviarMensajeDiscord(String canal, String mensaje) {
-        discordAdapter.enviarMensaje(canal, mensaje);
-    }
-    
-    /**
-     * Conecta con SendGrid para emails.
-     */
-    public void conectarSendGrid() {
-        sendgridAdapter.conectar();
-    }
-    
-    /**
-     * Envía email.
-     */
-    public boolean enviarEmail(String destinatario, String asunto, String cuerpo) {
-        return sendgridAdapter.enviarEmail(destinatario, asunto, cuerpo);
-    }
-    
-    /**
-     * Conecta con iCal.
-     */
-    public void conectarICal() {
-        icalAdapter.conectar();
-    }
-    
-    /**
-     * Exporta evento a calendario.
-     */
-    public void exportarEventoCalendario(String titulo, LocalDateTime fecha, int duracion) {
-        icalAdapter.exportarEvento(titulo, fecha, duracion);
     }
     
     // ============ EVENTOS (OBSERVER) ============

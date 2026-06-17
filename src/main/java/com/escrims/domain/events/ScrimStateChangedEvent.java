@@ -8,16 +8,19 @@ import java.util.UUID;
  */
 public class ScrimStateChangedEvent extends DomainEvent {
     private final UUID scrimId;
-    private final String nuevoEstado;
+    private final String estadoAnterior;
+    private final String estadoNuevo;
     
-    public ScrimStateChangedEvent(UUID scrimId, String nuevoEstado) {
+    public ScrimStateChangedEvent(UUID scrimId, String estadoAnterior, String estadoNuevo) {
         super();
         this.scrimId = scrimId;
-        this.nuevoEstado = nuevoEstado;
+        this.estadoAnterior = estadoAnterior;
+        this.estadoNuevo = estadoNuevo;
     }
     
     public UUID getScrimId() { return scrimId; }
-    public String getNuevoEstado() { return nuevoEstado; }
+    public String getEstadoAnterior() { return estadoAnterior; }
+    public String getEstadoNuevo() { return estadoNuevo; }
     
     @Override
     public String getEventType() {

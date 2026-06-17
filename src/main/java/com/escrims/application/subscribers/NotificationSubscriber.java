@@ -1,4 +1,4 @@
-package com.escrims.application;
+package com.escrims.application.subscribers;
 
 import com.escrims.domain.events.*;
 import com.escrims.domain.model.*;
@@ -33,11 +33,14 @@ public class NotificationSubscriber implements Subscriber {
         Scrim scrim = scrimRepository.get(event.getScrimId());
         if (scrim == null) return;
         
-        String mensaje = "El scrim '" + scrim.getJuego() + "' cambió a estado: " + event.getNuevoEstado();
+        String mensaje = "El scrim '" + scrim.getJuego() + "' cambió de estado: "
+            + event.getEstadoAnterior()
+            + " -> "
+            + event.getEstadoNuevo();
         
         // Notificar a todos los participantes
         scrim.getPostulaciones().stream()
-            .filter(p -> p.getEstado() == EstadoPostulacion.ACEPTADA)
+            .filter(p -> p.getEstado().esAceptada())
             .forEach(p -> {
                 Usuario usuario = p.getUsuario();
                 enviarNotificaciones(usuario, "Actualización de Scrim", mensaje);

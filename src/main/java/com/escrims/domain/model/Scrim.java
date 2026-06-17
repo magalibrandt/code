@@ -40,6 +40,10 @@ public class Scrim {
         this.equipoB = new Equipo("B");
     }
     
+    public Scrim(Usuario creador, String juego, String formato, String region) {
+        this(juego, formato, region, creador);
+    }
+    
     // Getters
     public UUID getId() { return id; }
     public String getJuego() { return juego; }
@@ -54,9 +58,9 @@ public class Scrim {
     public int getCuposTotales() { return cuposTotales; }
     public Usuario getCreador() { return creador; }
     public ScrimState getEstado() { return estado; }
-    public List<Postulacion> getPostulaciones() { return postulaciones; }
-    public List<Confirmacion> getConfirmaciones() { return confirmaciones; }
-    public Map<String, Integer> getRolesPorLado() { return rolesPorLado; }
+    public List<Postulacion> getPostulaciones() { return Collections.unmodifiableList(postulaciones); }
+    public List<Confirmacion> getConfirmaciones() { return Collections.unmodifiableList(confirmaciones); }
+    public Map<String, Integer> getRolesPorLado() { return Collections.unmodifiableMap(rolesPorLado); }
     public Equipo getEquipoA() { return equipoA; }
     public Equipo getEquipoB() { return equipoB; }
     public Estadistica getEstadistica() { return estadistica; }
@@ -97,13 +101,17 @@ public class Scrim {
         this.postulaciones.add(postulacion);
     }
     
+    public void removerPostulacionDe(Usuario usuario) {
+        this.postulaciones.removeIf(p -> p.getUsuario().equals(usuario));
+    }
+    
     public void agregarConfirmacion(Confirmacion confirmacion) {
         this.confirmaciones.add(confirmacion);
     }
     
     public boolean estaCompleto() {
         long aceptadas = postulaciones.stream()
-            .filter(p -> p.getEstado() == EstadoPostulacion.ACEPTADA)
+            .filter(p -> p.getEstado().esAceptada())
             .count();
         return aceptadas >= cuposTotales;
     }
@@ -126,7 +134,7 @@ public class Scrim {
             // Obtener el rol deseado de la postulación del usuario
             String rol = postulaciones.stream()
                 .filter(p -> p.getUsuario().equals(usuario) && 
-                           p.getEstado() == EstadoPostulacion.ACEPTADA)
+                           p.getEstado().esAceptada())
                 .findFirst()
                 .map(Postulacion::getRolDeseado)
                 .orElse("Soporte"); // Default si no se encuentra
@@ -140,6 +148,6 @@ public class Scrim {
     }
     
     public String getNombreEstado() {
-        return estado.getNombreEstado();
+        return estado.getNombre();
     }
 }

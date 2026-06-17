@@ -15,7 +15,7 @@ public class Postulacion {
         this.usuario = usuario;
         this.scrim = scrim;
         this.rolDeseado = rolDeseado;
-        this.estado = EstadoPostulacion.PENDIENTE;
+        this.estado = EstadoPostulacion.pendiente();
         this.fechaPostulacion = new Date();
     }
     
@@ -42,10 +42,10 @@ public class Postulacion {
     public void setRolDeseado(String rolDeseado) { this.rolDeseado = rolDeseado; }
     
     public void aceptar() {
-        this.estado = EstadoPostulacion.ACEPTADA;
+        this.estado = EstadoPostulacion.aceptada();
     }
     
     public void rechazar() {
-        this.estado = EstadoPostulacion.RECHAZADA;
+        this.estado = EstadoPostulacion.rechazada();
     }
 }

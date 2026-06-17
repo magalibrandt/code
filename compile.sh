@@ -8,7 +8,9 @@ mkdir -p out
 
 # Compilar todos los archivos Java
 echo "Compilando archivos Java..."
-javac -d out -sourcepath src/main/java src/main/java/com/escrims/**/*.java src/main/java/com/escrims/*.java
+find src/main/java -name "*.java" > sources.txt
+javac -d out -sourcepath src/main/java @sources.txt
+rm -f sources.txt
 
 if [ $? -eq 0 ]; then
     echo "✓ Compilación exitosa!"

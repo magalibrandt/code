@@ -1,17 +1,11 @@
 package com.escrims.infrastructure.adapters;
 
 /**
- * PATRÓN ADAPTER
- * Interface que adaptadores deben implementar para diferentes servicios externos.
+ * PATRON ADAPTER.
+ * Interface que los adaptadores implementan para servicios externos simulados.
  */
 public interface ExternalServiceAdapter {
-    /**
-     * Verifica la conectividad con el servicio externo.
-     */
-    boolean estáDisponible();
-    
-    /**
-     * Obtiene el nombre del servicio.
-     */
+    boolean estaDisponible();
+
     String getNombre();
 }

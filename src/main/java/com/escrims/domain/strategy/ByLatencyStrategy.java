@@ -41,6 +41,13 @@ public class ByLatencyStrategy implements MatchmakingStrategy {
         latenciasLATAM.put("LATAM", 20);
         latenciasLATAM.put("BR", 40);
         latenciasPorRegion.put("LATAM", latenciasLATAM);
+        
+        Map<String, Integer> latenciasBR = new HashMap<>();
+        latenciasBR.put("NA", 80);
+        latenciasBR.put("EU", 140);
+        latenciasBR.put("LATAM", 40);
+        latenciasBR.put("BR", 20);
+        latenciasPorRegion.put("BR", latenciasBR);
     }
     
     @Override

@@ -34,7 +34,7 @@ public class FinalizadoState implements ScrimState {
     }
     
     @Override
-    public String getNombreEstado() {
+    public String getNombre() {
         return "Finalizado";
     }
 }

@@ -9,6 +9,10 @@ public class SendGridAdapter implements ExternalServiceAdapter {
     private String emailFrom;
     private boolean conectado;
     
+    public SendGridAdapter(String apiKey) {
+        this(apiKey, "noreply@escrims.com");
+    }
+
     public SendGridAdapter(String apiKey, String emailFrom) {
         this.apiKey = apiKey;
         this.emailFrom = emailFrom;
@@ -16,7 +20,7 @@ public class SendGridAdapter implements ExternalServiceAdapter {
     }
     
     @Override
-    public boolean estáDisponible() {
+    public boolean estaDisponible() {
         return conectado;
     }
     

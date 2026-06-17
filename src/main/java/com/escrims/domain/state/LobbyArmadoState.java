@@ -19,7 +19,7 @@ public class LobbyArmadoState implements ScrimState {
         // Verificar que el usuario está en el scrim
         boolean estaEnScrim = scrim.getPostulaciones().stream()
             .anyMatch(p -> p.getUsuario().equals(usuario) && 
-                          p.getEstado() == EstadoPostulacion.ACEPTADA);
+                          p.getEstado().esAceptada());
         
         if (!estaEnScrim) {
             throw new IllegalStateException("Usuario no está en este scrim");
@@ -34,7 +34,7 @@ public class LobbyArmadoState implements ScrimState {
         if (scrim.todosConfirmaron()) {
             scrim.setEstado(new ConfirmadoState());
             DomainEventBus.getInstance().publish(
-                new ScrimStateChangedEvent(scrim.getId(), "Confirmado")
+                new ScrimStateChangedEvent(scrim.getId(), "Lobby Armado", "Confirmado")
             );
         }
     }
@@ -53,12 +53,12 @@ public class LobbyArmadoState implements ScrimState {
     public void cancelar(Scrim scrim) {
         scrim.setEstado(new CanceladoState());
         DomainEventBus.getInstance().publish(
-            new ScrimStateChangedEvent(scrim.getId(), "Cancelado")
+            new ScrimStateChangedEvent(scrim.getId(), "Lobby Armado", "Cancelado")
         );
     }
     
     @Override
-    public String getNombreEstado() {
+    public String getNombre() {
         return "Lobby Armado";
     }
 }

@@ -1,7 +1,7 @@
 package com.escrims.domain.moderacion;
 
 import com.escrims.domain.model.ReporteConducta;
-import com.escrims.domain.model.ReporteConducta.Sancion;
+import com.escrims.domain.model.Sancion;
 
 /**
  * PATRÓN CHAIN OF RESPONSIBILITY - Handler Concreto 3
@@ -23,14 +23,14 @@ public class HumanModeratorProcessor implements ReportProcessor {
         
         if (reporte.getReportado().getStrikes() >= 5) {
             System.out.println("  → Decisión: BAN PERMANENTE (demasiados strikes previos)");
-            reporte.marcarResuelto(Sancion.BAN_PERMANENTE, "Baneado por acumulación de sanciones", "Moderator");
+            reporte.marcarResuelto(Sancion.banPermanente(), "Baneado por acumulacion de sanciones", "Moderator");
         } else if (reporte.getMotivo().toLowerCase().contains("fraude") || 
                    reporte.getMotivo().toLowerCase().contains("smurfing")) {
             System.out.println("  → Decisión: SUSPENSIÓN 7 DÍAS (fraude/smurfing)");
-            reporte.marcarResuelto(Sancion.SUSPENSION_7D, "Suspensión por fraude o smurfing confirmado", "Moderator");
+            reporte.marcarResuelto(Sancion.suspension7d(), "Suspension por fraude o smurfing confirmado", "Moderator");
         } else {
             System.out.println("  → Decisión: ADVERTENCIA (incidente leve)");
-            reporte.marcarResuelto(Sancion.ADVERTENCIA, "Advertencia formal de moderador", "Moderator");
+            reporte.marcarResuelto(Sancion.advertencia(), "Advertencia formal de moderador", "Moderator");
         }
         
         // No hay siguiente en la cadena - fin del procesamiento

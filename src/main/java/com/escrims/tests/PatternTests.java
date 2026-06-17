@@ -1,259 +1,241 @@
 package com.escrims.tests;
 
-import com.escrims.domain.model.*;
-import com.escrims.domain.strategy.*;
-import com.escrims.domain.command.*;
-import com.escrims.infrastructure.notifications.*;
+import com.escrims.application.builder.ScrimBuilder;
+import com.escrims.application.service.ScrimService;
+import com.escrims.domain.command.AsignarRolCommand;
+import com.escrims.domain.command.CommandInvoker;
+import com.escrims.domain.events.DomainEvent;
+import com.escrims.domain.events.DomainEventBus;
+import com.escrims.domain.events.ScrimStateChangedEvent;
+import com.escrims.domain.model.Postulacion;
+import com.escrims.domain.model.ReporteConducta;
+import com.escrims.domain.model.Scrim;
+import com.escrims.domain.model.Usuario;
+import com.escrims.domain.moderacion.AutomaticProcessor;
+import com.escrims.domain.moderacion.BotProcessor;
+import com.escrims.domain.moderacion.HumanModeratorProcessor;
+import com.escrims.domain.moderacion.ReportProcessor;
+import com.escrims.domain.events.Subscriber;
+import com.escrims.domain.strategy.ByMMRStrategy;
+import com.escrims.domain.strategy.ByLatencyStrategy;
+import com.escrims.domain.strategy.MatchmakingStrategy;
+import com.escrims.infrastructure.notifications.DevNotifierFactory;
+import com.escrims.infrastructure.notifications.Notifier;
+import com.escrims.infrastructure.notifications.NotifierFactory;
+import com.escrims.infrastructure.notifications.ProdNotifierFactory;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
 
-/**
- * Ejemplos de Unit Tests para los patrones de diseño.
- * En un proyecto real, usar JUnit 4/5 y Mockito.
- */
 public class PatternTests {
-    
-    /**
-     * TEST: Strategy Pattern - ByMMRStrategy
-     */
+
     public static void testByMMRStrategy() {
-        System.out.println("\n=== TEST: ByMMRStrategy ===");
-        
         Usuario u1 = new Usuario("Player1", "p1@test.com", "hash1", "LATAM");
         u1.agregarRango("Valorant", "Gold");
-        
+
         Usuario u2 = new Usuario("Player2", "p2@test.com", "hash2", "LATAM");
         u2.agregarRango("Valorant", "Platinum");
-        
+
         Usuario u3 = new Usuario("Player3", "p3@test.com", "hash3", "LATAM");
         u3.agregarRango("Valorant", "Silver");
-        
+
         Scrim scrim = new Scrim("Valorant", "5v5", "LATAM", u1);
         scrim.setRangoMin("Gold");
         scrim.setRangoMax("Platinum");
-        
+        scrim.setCuposTotales(2);
+
         MatchmakingStrategy strategy = new ByMMRStrategy();
-        List<Usuario> candidatos = Arrays.asList(u1, u2, u3);
-        List<Usuario> seleccionados = strategy.seleccionar(candidatos, scrim);
-        
-        // Assertions
-        assert seleccionados.size() >= 1 : "Debe seleccionar al menos 1 jugador";
-        assert seleccionados.contains(u1) : "Debe contener Gold (u1)";
-        assert seleccionados.contains(u2) : "Debe contener Platinum (u2)";
-        System.out.println("✓ Test pasado: " + seleccionados.size() + " jugadores seleccionados");
+        List<Usuario> seleccionados = strategy.seleccionar(Arrays.asList(u1, u2, u3), scrim);
+
+        require(seleccionados.size() == 2, "Debe seleccionar 2 jugadores por cupo");
+        require(seleccionados.contains(u1), "Debe contener Gold");
+        require(seleccionados.contains(u2), "Debe contener Platinum");
     }
-    
-    /**
-     * TEST: State Pattern - Transiciones de estado
-     */
+
     public static void testStateTransitions() {
-        System.out.println("\n=== TEST: State Pattern Transitions ===");
-        
         Usuario organizador = new Usuario("Org", "org@test.com", "hash", "LATAM");
         Scrim scrim = new Scrim("Valorant", "5v5", "LATAM", organizador);
-        
-        // Estado inicial
-        assert scrim.getNombreEstado().equals("Buscando Jugadores") : 
-            "Estado inicial debe ser Buscando Jugadores";
-        System.out.println("✓ Estado inicial: " + scrim.getNombreEstado());
-        
-        // Simular cupo completo
+        scrim.setCuposTotales(5);
+
+        require(scrim.getNombreEstado().equals("Buscando Jugadores"), "Estado inicial incorrecto");
+
         for (int i = 1; i <= 5; i++) {
             Usuario u = new Usuario("Player" + i, "p" + i + "@test.com", "hash" + i, "LATAM");
             u.agregarRango("Valorant", "Gold");
             scrim.postular(u, "Duelist");
         }
-        
-        // Verificar transición
-        assert scrim.getNombreEstado().equals("Lobby Armado") : 
-            "Debe transicionar a Lobby Armado cuando cupo completo";
-        System.out.println("✓ Transición a: " + scrim.getNombreEstado());
-        
-        // Confirmar participación
+
+        require(scrim.getNombreEstado().equals("Lobby Armado"), "Debe pasar a Lobby Armado");
+
         for (Postulacion p : scrim.getPostulaciones()) {
-            if (p.getEstado() == EstadoPostulacion.ACEPTADA) {
+            if (p.getEstado().esAceptada()) {
                 scrim.confirmar(p.getUsuario());
             }
         }
-        
-        assert scrim.getNombreEstado().equals("Confirmado") : 
-            "Debe transicionar a Confirmado cuando todos confirman";
-        System.out.println("✓ Transición a: " + scrim.getNombreEstado());
-        
-        // Iniciar
+
+        require(scrim.getNombreEstado().equals("Confirmado"), "Debe pasar a Confirmado");
+
         scrim.iniciar();
-        assert scrim.getNombreEstado().equals("En Juego") : 
-            "Debe transicionar a En Juego";
-        System.out.println("✓ Transición a: " + scrim.getNombreEstado());
-        
-        // Finalizar
+        require(scrim.getNombreEstado().equals("En Juego"), "Debe pasar a En Juego");
+
         scrim.finalizar();
-        assert scrim.getNombreEstado().equals("Finalizado") : 
-            "Debe transicionar a Finalizado";
-        System.out.println("✓ Transición a: " + scrim.getNombreEstado());
+        require(scrim.getNombreEstado().equals("Finalizado"), "Debe pasar a Finalizado");
     }
-    
-    /**
-     * TEST: Command Pattern - Undo/Redo
-     */
+
     public static void testCommandPattern() {
-        System.out.println("\n=== TEST: Command Pattern ===");
-        
         Usuario organizador = new Usuario("Org", "org@test.com", "hash", "LATAM");
         Usuario jugador = new Usuario("Player", "p@test.com", "hash", "LATAM");
-        
+
         Scrim scrim = new Scrim("Valorant", "5v5", "LATAM", organizador);
+        scrim.getEquipoA().agregarJugador(jugador, "Support");
+
         CommandInvoker invoker = new CommandInvoker(scrim);
-        
-        // Rol inicial
-        String rolInicial = jugador.getRolesPreferidos().isEmpty() ? 
-            "NINGUNO" : jugador.getRolesPreferidos().get(0);
-        System.out.println("Rol inicial: " + rolInicial);
-        
-        // Ejecutar comando
         invoker.ejecutar(new AsignarRolCommand(jugador, "Duelist"));
-        assert jugador.getRolesPreferidos().contains("Duelist") : 
-            "Debe tener rol Duelist";
-        System.out.println("✓ Rol asignado: " + jugador.getRolesPreferidos().get(0));
-        
-        // Deshacer
+        require("Duelist".equals(scrim.getEquipoA().getRolDeJugador(jugador)), "Debe asignar rol en Equipo");
+
         invoker.deshacer();
-        System.out.println("✓ Comando deshecho");
-        
-        // Verificar historial
-        List<String> historial = invoker.obtenerHistorial();
-        assert historial.size() >= 1 : "Debe haber historial";
-        System.out.println("✓ Historial registrado: " + historial.size() + " comando(s)");
+        require("Support".equals(scrim.getEquipoA().getRolDeJugador(jugador)), "Undo debe restaurar rol anterior");
     }
-    
-    /**
-     * TEST: Builder Pattern - Validaciones
-     */
+
     public static void testBuilderPattern() {
-        System.out.println("\n=== TEST: Builder Pattern ===");
-        
         Usuario organizador = new Usuario("Org", "org@test.com", "hash", "LATAM");
-        
-        try {
-            Scrim scrim = new ScrimBuilder("Valorant", "5v5", "LATAM", organizador)
-                .conRangos("Gold", "Platinum")
-                .conLatenciaMaxima(80)
-                .conFechaHora(LocalDateTime.now().plusHours(2))
-                .conCupos(10)
-                .conModalidad("ranked-like")
-                .build();
-            
-            assert scrim != null : "Scrim debe ser creado";
-            assert scrim.getRangoMin().equals("Gold") : "Rango mínimo debe ser Gold";
-            assert scrim.getCuposTotales() == 10 : "Cupos deben ser 10";
-            
-            System.out.println("✓ Scrim construido exitosamente");
-            System.out.println("  Juego: " + scrim.getJuego());
-            System.out.println("  Rango: " + scrim.getRangoMin() + " - " + scrim.getRangoMax());
-            System.out.println("  Cupos: " + scrim.getCuposTotales());
-        } catch (Exception e) {
-            System.out.println("✗ Test fallido: " + e.getMessage());
-        }
+
+        Scrim scrim = new ScrimBuilder(organizador, "Valorant", "5v5", "LATAM")
+            .conRangos("Gold", "Platinum")
+            .conLatenciaMaxima(80)
+            .conFechaHora(LocalDateTime.now().plusHours(2))
+            .conCupos(10)
+            .conModalidad("ranked-like")
+            .build();
+
+        require(scrim.getRangoMin().equals("Gold"), "Rango minimo debe ser Gold");
+        require(scrim.getCuposTotales() == 10, "Cupos deben ser 10");
     }
-    
-    /**
-     * TEST: Abstract Factory Pattern
-     */
+
     public static void testAbstractFactory() {
-        System.out.println("\n=== TEST: Abstract Factory Pattern ===");
-        
-        // Dev Environment
         NotifierFactory devFactory = new DevNotifierFactory();
-        Notifier pushDev = devFactory.createPush();
-        System.out.println("✓ Dev Push Notifier: " + pushDev.getChannelName());
-        
-        // Prod Environment
+        Notifier pushDev = devFactory.createPushNotifier();
+        Notifier emailDev = devFactory.createEmailNotifier();
+        Notifier discordDev = devFactory.createDiscordNotifier();
+
         NotifierFactory prodFactory = new ProdNotifierFactory();
-        Notifier pushProd = prodFactory.createPush();
-        System.out.println("✓ Prod Push Notifier: " + pushProd.getChannelName());
-        
-        assert !pushDev.getClass().equals(pushProd.getClass()) : 
-            "Dev y Prod deben usar notificadores diferentes";
-        System.out.println("✓ Diferentes implementaciones por entorno");
+        Notifier pushProd = prodFactory.createPushNotifier();
+
+        require(!pushDev.getClass().equals(pushProd.getClass()), "Dev y Prod deben usar implementaciones diferentes");
+        require(pushDev.getChannelName().contains("Push"), "Debe crear notifier push");
+        require(emailDev.getChannelName().contains("Email"), "Debe crear notifier email");
+        require(discordDev.getChannelName().contains("Discord"), "Debe crear notifier discord");
     }
-    
-    /**
-     * TEST: Validación de Usuario
-     */
+
+    public static void testStrategyChangeInService() {
+        ScrimService service = new ScrimService(new ByMMRStrategy());
+        Usuario organizador = new Usuario("Org", "org@test.com", "hash", "LATAM");
+        Scrim scrim = service.crearScrim(organizador, "Valorant", "5v5", "LATAM");
+        scrim.setCuposTotales(1);
+        scrim.setLatenciaMax(80);
+
+        Usuario jugador = new Usuario("Player", "p@test.com", "hash", "LATAM");
+        jugador.agregarRango("Valorant", "Gold");
+
+        List<Usuario> porMmr = service.emparejarJugadores(scrim, List.of(jugador));
+        service.setMatchmakingStrategy(new ByLatencyStrategy());
+        List<Usuario> porLatencia = service.emparejarJugadores(scrim, List.of(jugador));
+
+        require(porMmr.size() == 1, "Estrategia MMR debe seleccionar jugador");
+        require(porLatencia.size() == 1, "Estrategia latencia debe seleccionar jugador");
+    }
+
+    public static void testDomainEventBus() {
+        DomainEventBus bus = DomainEventBus.getInstance();
+        bus.clearSubscribers();
+        CountingSubscriber subscriber = new CountingSubscriber();
+        bus.subscribe(subscriber);
+        bus.publish(new ScrimStateChangedEvent(java.util.UUID.randomUUID(), "A", "B"));
+
+        require(subscriber.count == 1, "EventBus debe publicar a suscriptores");
+        require(subscriber.lastEvent instanceof ScrimStateChangedEvent, "Debe entregar el evento publicado");
+        bus.clearSubscribers();
+    }
+
+    public static void testReportProcessorChain() {
+        Usuario organizador = new Usuario("Org", "org@test.com", "hash", "LATAM");
+        Usuario reportador = new Usuario("Reporter", "r@test.com", "hash", "LATAM");
+        Usuario reportado = new Usuario("Reported", "d@test.com", "hash", "LATAM");
+        Scrim scrim = new Scrim(organizador, "Valorant", "5v5", "LATAM");
+        ReporteConducta reporte = new ReporteConducta(scrim, reportador, reportado, "LENGUAJE_OFENSIVO", "insultos");
+
+        ReportProcessor auto = new AutomaticProcessor();
+        ReportProcessor bot = new BotProcessor();
+        ReportProcessor human = new HumanModeratorProcessor();
+        auto.setSiguiente(bot);
+        bot.setSiguiente(human);
+        auto.procesarReporte(reporte);
+
+        require(reporte.getEstado().esResuelto(), "La cadena debe resolver el reporte");
+        require(reporte.getSancion() != null, "La cadena debe asignar sancion");
+    }
+
     public static void testUsuarioValidation() {
-        System.out.println("\n=== TEST: Usuario Validation ===");
-        
         Usuario usuario = new Usuario("TestPlayer", "test@test.com", "hash", "LATAM");
-        
-        // Agregar rangos
         usuario.agregarRango("Valorant", "Gold");
         usuario.agregarRango("LoL", "Silver");
-        
-        assert usuario.getRangoParaJuego("Valorant").equals("Gold") : 
-            "Rango debe ser Gold";
-        assert usuario.getRangoParaJuego("CS2").equals("Unranked") : 
-            "Rango no asignado debe ser Unranked";
-        
-        System.out.println("✓ Usuario con rangos:");
-        System.out.println("  Valorant: " + usuario.getRangoParaJuego("Valorant"));
-        System.out.println("  LoL: " + usuario.getRangoParaJuego("LoL"));
-        System.out.println("  CS2: " + usuario.getRangoParaJuego("CS2"));
-        
-        // Agregar roles
+
+        require(usuario.getRangoParaJuego("Valorant").equals("Gold"), "Rango Valorant incorrecto");
+        require(usuario.getRangoParaJuego("CS2").equals("Unranked"), "Rango default incorrecto");
+
         usuario.agregarRolPreferido("Duelist");
         usuario.agregarRolPreferido("Support");
-        
-        assert usuario.getRolesPreferidos().size() == 2 : 
-            "Debe tener 2 roles preferidos";
-        System.out.println("✓ Roles preferidos: " + usuario.getRolesPreferidos());
+        require(usuario.getRolesPreferidos().size() == 2, "Debe tener 2 roles preferidos");
     }
-    
-    /**
-     * TEST: Sistema de Strikes
-     */
+
     public static void testStrikeSystem() {
-        System.out.println("\n=== TEST: Strike System ===");
-        
         Usuario usuario = new Usuario("Player", "p@test.com", "hash", "LATAM");
-        
-        assert usuario.getStrikes() == 0 : "Strikes iniciales debe ser 0";
-        assert !usuario.estaBajoSancion() : "No debe estar sancionado";
-        
+
+        require(usuario.getStrikes() == 0, "Strikes iniciales debe ser 0");
+        require(!usuario.estaBajoSancion(), "No debe estar sancionado inicialmente");
+
         usuario.aplicarStrike();
-        assert usuario.getStrikes() == 1 : "Strikes debe ser 1";
-        System.out.println("✓ Strike 1 aplicado");
-        
+        require(usuario.getStrikes() == 1, "Strikes debe ser 1");
+
         usuario.aplicarStrike();
         usuario.aplicarStrike();
-        assert usuario.getStrikes() == 3 : "Strikes debe ser 3";
-        assert usuario.estaBajoSancion() : "Debe estar bajo sanción con 3 strikes";
-        System.out.println("✓ Strikes: " + usuario.getStrikes());
-        System.out.println("✓ Cooldown activo hasta: " + usuario.getCooldownHasta());
+        require(usuario.getStrikes() == 3, "Strikes debe ser 3");
+        require(usuario.estaBajoSancion(), "Debe estar bajo sancion con 3 strikes");
     }
-    
-    /**
-     * Ejecutar todos los tests
-     */
+
     public static void main(String[] args) {
-        System.out.println("╔════════════════════════════════════════════════════════════╗");
-        System.out.println("║           TESTS DE PATRONES DE DISEÑO - eSCRIMS           ║");
-        System.out.println("╚════════════════════════════════════════════════════════════╝");
-        
-        try {
-            testByMMRStrategy();
-            testStateTransitions();
-            testCommandPattern();
-            testBuilderPattern();
-            testAbstractFactory();
-            testUsuarioValidation();
-            testStrikeSystem();
-            
-            System.out.println("\n╔════════════════════════════════════════════════════════════╗");
-            System.out.println("║                    ✓ TODOS LOS TESTS PASARON             ║");
-            System.out.println("╚════════════════════════════════════════════════════════════╝\n");
-        } catch (AssertionError e) {
-            System.out.println("\n✗ TEST FALLIDO: " + e.getMessage());
-            e.printStackTrace();
+        testByMMRStrategy();
+        testStateTransitions();
+        testCommandPattern();
+        testBuilderPattern();
+        testAbstractFactory();
+        testStrategyChangeInService();
+        testDomainEventBus();
+        testReportProcessorChain();
+        testUsuarioValidation();
+        testStrikeSystem();
+        System.out.println("TODOS LOS TESTS PASARON");
+    }
+
+    private static class CountingSubscriber implements Subscriber {
+        private int count;
+        private DomainEvent lastEvent;
+
+        @Override
+        public void onEvent(DomainEvent event) {
+            count++;
+            lastEvent = event;
+        }
+
+        @Override
+        public String getSubscriberName() {
+            return "CountingSubscriber";
+        }
+    }
+
+    private static void require(boolean condition, String message) {
+        if (!condition) {
+            throw new AssertionError(message);
         }
     }
 }

@@ -7,7 +7,8 @@ import com.escrims.domain.command.*;
 import com.escrims.domain.moderacion.*;
 import com.escrims.infrastructure.notifications.*;
 import com.escrims.infrastructure.adapters.*;
-import com.escrims.application.*;
+import com.escrims.application.service.ScrimService;
+import com.escrims.application.subscribers.NotificationSubscriber;
 import com.escrims.application.builder.ScrimBuilder;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -16,6 +17,8 @@ import java.util.*;
  * Demostración completa de todos los patrones de diseño
  * y funcionalidades del sistema eScrims.
  */
+// Esta clase es demostrativa e instancia algunos subsistemas directamente para mostrar los patrones en ejecucion.
+// No representa necesariamente el flujo limpio de uso de la aplicacion, que debe pasar por EscrimsFacade y servicios de aplicacion.
 public class DemoCompleta {
     public static void main(String[] args) {
         System.out.println("╔════════════════════════════════════════════════════════════════╗");
@@ -88,7 +91,7 @@ public class DemoCompleta {
         System.out.println("  Jugador 3: " + jugador3.getUsername() + "\n");
         
         // ============ PATRÓN BUILDER - Crear Scrim ============
-        System.out.println("┌─ PATRÓN BUILDER: Crear Scrim ──────────────────────────────────┐");
+        System.out.println("┌─ PATRON BUILDER: Crear Scrim ──────────────────────────────────┐");
         
         Scrim scrim = new ScrimBuilder("Valorant", "5v5", "LATAM", organizador)
             .conRangos("Gold", "Platinum")
@@ -106,7 +109,7 @@ public class DemoCompleta {
         System.out.println("  Estado: " + scrim.getNombreEstado() + "\n");
         
         // ============ PATRÓN STATE - Postulaciones y transiciones ============
-        System.out.println("┌─ PATRÓN STATE: Ciclo de vida del Scrim ────────────────────────┐");
+        System.out.println("┌─ PATRON STATE: Ciclo de vida del Scrim ────────────────────────┐");
         System.out.println("Simulando postulaciones y transiciones de estado...\n");
         
         scrim.postular(jugador1, "Duelist");
@@ -129,9 +132,14 @@ public class DemoCompleta {
         }
         
         System.out.println("✓ Cupo completo! Estado: " + scrim.getNombreEstado() + "\n");
+        List<Usuario> aceptados = scrim.getPostulaciones().stream()
+            .filter(p -> p.getEstado().esAceptada())
+            .map(Postulacion::getUsuario)
+            .toList();
+        scrim.ejecutarMatchmaking(aceptados);
         
         // ============ PATRÓN COMMAND - Operaciones reversibles ============
-        System.out.println("┌─ PATRÓN COMMAND: Acciones reversibles ──────────────────────────┐");
+        System.out.println("┌─ PATRON COMMAND: Acciones reversibles ──────────────────────────┐");
         
         CommandInvoker invoker = new CommandInvoker(scrim);
         
@@ -140,7 +148,8 @@ public class DemoCompleta {
         invoker.ejecutar(new AsignarRolCommand(jugador2, "Support"));
         
         // Intercambiar jugadores
-        invoker.ejecutar(new SwapJugadoresCommand(jugador1, jugador3));
+        Usuario jugadorEquipoB = scrim.getEquipoB().getJugadores().get(0);
+        invoker.ejecutar(new SwapJugadoresCommand(jugador1, jugadorEquipoB));
         
         // Deshacer
         System.out.println("\nDeshaciendo último comando...");
@@ -150,7 +159,7 @@ public class DemoCompleta {
         invoker.obtenerHistorial().forEach(cmd -> System.out.println("  - " + cmd));
         
         // ============ PATRÓN STRATEGY - Cambiar algoritmos ============
-        System.out.println("\n┌─ PATRÓN STRATEGY: Algoritmos intercambiables ───────────────────┐");
+        System.out.println("\n┌─ PATRON STRATEGY: Algoritmos intercambiables ───────────────────┐");
         
         List<Usuario> candidatos = Arrays.asList(jugador1, jugador2, jugador3);
         
@@ -168,10 +177,10 @@ public class DemoCompleta {
         }
         
         // ============ PATRÓN STATE - Confirmaciones ============
-        System.out.println("\n┌─ PATRÓN STATE: Confirmación de participantes ──────────────────┐");
+        System.out.println("\n┌─ PATRON STATE: Confirmación de participantes ──────────────────┐");
         
         for (Postulacion p : scrim.getPostulaciones()) {
-            if (p.getEstado() == EstadoPostulacion.ACEPTADA) {
+            if (p.getEstado().esAceptada()) {
                 scrim.confirmar(p.getUsuario());
                 System.out.println("✓ " + p.getUsuario().getUsername() + " confirmó");
             }
@@ -179,7 +188,7 @@ public class DemoCompleta {
         System.out.println("\nEstado: " + scrim.getNombreEstado() + "\n");
         
         // ============ PATRÓN STATE - Iniciar y Finalizar ============
-        System.out.println("┌─ PATRÓN STATE: Iniciar y Finalizar ────────────────────────────┐");
+        System.out.println("┌─ PATRON STATE: Iniciar y Finalizar ────────────────────────────┐");
         
         scrim.iniciar();
         System.out.println("✓ Scrim iniciado! Estado: " + scrim.getNombreEstado());
@@ -188,7 +197,7 @@ public class DemoCompleta {
         System.out.println("✓ Scrim finalizado! Estado: " + scrim.getNombreEstado() + "\n");
         
         // ============ PATRÓN CHAIN OF RESPONSIBILITY - Moderación ============
-        System.out.println("┌─ PATRÓN CHAIN OF RESPONSIBILITY: Moderación ────────────────────┐");
+        System.out.println("┌─ PATRON CHAIN OF RESPONSIBILITY: Moderación ────────────────────┐");
         
         ReporteConducta reporte = new ReporteConducta(scrim, jugador1, jugador3, "LENGUAJE_OFENSIVO",
             "El jugador usó lenguaje inapropiado durante el scrim");
@@ -216,7 +225,7 @@ public class DemoCompleta {
         System.out.println("\n┌─ PATRÓN OBSERVER: Sistema de eventos ───────────────────────────┐");
         
         System.out.println("Publicando evento...");
-        eventBus.publish(new ScrimStateChangedEvent(scrim.getId(), "Finalizado"));
+        eventBus.publish(new ScrimStateChangedEvent(scrim.getId(), "En Juego", "Finalizado"));
         System.out.println("✓ Evento publicado a suscriptores\n");
         
         // ============ RESUMEN FINAL ============

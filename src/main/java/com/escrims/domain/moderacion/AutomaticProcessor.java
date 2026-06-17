@@ -1,7 +1,7 @@
 package com.escrims.domain.moderacion;
 
 import com.escrims.domain.model.ReporteConducta;
-import com.escrims.domain.model.ReporteConducta.Sancion;
+import com.escrims.domain.model.Sancion;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
@@ -20,14 +20,14 @@ public class AutomaticProcessor implements ReportProcessor {
         // Casos que se pueden auto-resolver
         if (reporte.getMotivo().equalsIgnoreCase("SPAM")) {
             System.out.println("  → Caso de SPAM detectado. Aplicando sanción automática.");
-            reporte.marcarResuelto(Sancion.ADVERTENCIA, "Spam automáticamente detectado y sancionado", "AutoBot");
+            reporte.marcarResuelto(Sancion.advertencia(), "Spam automaticamente detectado y sancionado", "AutoBot");
             return;
         }
         
         if (reporte.getMotivo().equalsIgnoreCase("INACTIVIDAD") && reporte.getDescripcion().toLowerCase().contains("no show")) {
             System.out.println("  → No-show detectado. Aplicando strike.");
             reporte.getReportado().aplicarStrike();
-            reporte.marcarResuelto(Sancion.ADVERTENCIA, "No-show registrado, strike aplicado", "AutoBot");
+            reporte.marcarResuelto(Sancion.advertencia(), "No-show registrado, strike aplicado", "AutoBot");
             return;
         }
         

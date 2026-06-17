@@ -18,6 +18,8 @@ public abstract class DomainEvent {
     
     public UUID getEventId() { return eventId; }
     public Date getTimestamp() { return timestamp; }
+    public UUID getId() { return eventId; }
+    public Date getOccurredOn() { return timestamp; }
     
     public abstract String getEventType();
 }

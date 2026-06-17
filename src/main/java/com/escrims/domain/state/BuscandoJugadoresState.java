@@ -30,7 +30,7 @@ public class BuscandoJugadoresState implements ScrimState {
         if (scrim.estaCompleto()) {
             scrim.setEstado(new LobbyArmadoState());
             DomainEventBus.getInstance().publish(
-                new ScrimStateChangedEvent(scrim.getId(), "LobbyArmado")
+                new ScrimStateChangedEvent(scrim.getId(), "Buscando Jugadores", "Lobby Armado")
             );
         }
     }
@@ -54,12 +54,12 @@ public class BuscandoJugadoresState implements ScrimState {
     public void cancelar(Scrim scrim) {
         scrim.setEstado(new CanceladoState());
         DomainEventBus.getInstance().publish(
-            new ScrimStateChangedEvent(scrim.getId(), "Cancelado")
+            new ScrimStateChangedEvent(scrim.getId(), "Buscando Jugadores", "Cancelado")
         );
     }
     
     @Override
-    public String getNombreEstado() {
+    public String getNombre() {
         return "Buscando Jugadores";
     }
 }

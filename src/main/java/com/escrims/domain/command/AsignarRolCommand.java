@@ -2,6 +2,7 @@ package com.escrims.domain.command;
 
 import com.escrims.domain.model.Scrim;
 import com.escrims.domain.model.Usuario;
+import com.escrims.domain.model.Equipo;
 
 /**
  * PATRÓN COMMAND - Comando Concreto
@@ -11,6 +12,7 @@ public class AsignarRolCommand implements ScrimCommand {
     private Usuario usuario;
     private String nuevoRol;
     private String rolAnterior;
+    private Equipo equipo;
     
     public AsignarRolCommand(Usuario usuario, String nuevoRol) {
         this.usuario = usuario;
@@ -20,24 +22,34 @@ public class AsignarRolCommand implements ScrimCommand {
     
     @Override
     public void execute(Scrim scrim) {
-        // Guardar rol anterior para poder hacer undo
-        this.rolAnterior = usuario.getRolesPreferidos().isEmpty() 
-            ? null 
-            : usuario.getRolesPreferidos().get(0);
-        
-        // Asignar nuevo rol
-        usuario.agregarRolPreferido(nuevoRol);
+        this.equipo = buscarEquipoDelUsuario(scrim);
+        if (equipo == null) {
+            throw new IllegalStateException("El usuario no pertenece a ningun equipo del scrim");
+        }
+        this.rolAnterior = equipo.getRolDeJugador(usuario);
+        equipo.asignarRol(usuario, nuevoRol);
     }
     
     @Override
     public void undo(Scrim scrim) {
-        if (rolAnterior != null) {
-            usuario.agregarRolPreferido(rolAnterior);
+        Equipo equipoActual = equipo != null ? equipo : buscarEquipoDelUsuario(scrim);
+        if (equipoActual != null) {
+            equipoActual.asignarRol(usuario, rolAnterior);
         }
     }
     
     @Override
     public String getDescription() {
         return String.format("Asignar rol '%s' a usuario '%s'", nuevoRol, usuario.getUsername());
+    }
+    
+    private Equipo buscarEquipoDelUsuario(Scrim scrim) {
+        if (scrim.getEquipoA().contieneJugador(usuario)) {
+            return scrim.getEquipoA();
+        }
+        if (scrim.getEquipoB().contieneJugador(usuario)) {
+            return scrim.getEquipoB();
+        }
+        return null;
     }
 }

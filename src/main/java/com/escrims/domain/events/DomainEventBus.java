@@ -34,7 +34,11 @@ public class DomainEventBus {
     
     public void publish(DomainEvent event) {
         for (Subscriber subscriber : subscribers) {
-            subscriber.onEvent(event);
+            try {
+                subscriber.onEvent(event);
+            } catch (RuntimeException e) {
+                System.err.println("[EVENT BUS] Subscriber fallo: " + subscriber.getSubscriberName() + " - " + e.getMessage());
+            }
         }
     }
     
