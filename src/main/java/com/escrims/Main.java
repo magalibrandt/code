@@ -18,28 +18,33 @@ public class Main {
 
         Usuario organizador = facade.crearUsuario("Organizador", "org@escrims.com", "hash", "LATAM");
         Usuario jugador1 = facade.crearUsuario("ProPlayer1", "p1@escrims.com", "hash", "LATAM");
+        jugador1.getPreferencias().setRecibirNotificacionesEmail(false);
         Usuario jugador2 = facade.crearUsuario("ProPlayer2", "p2@escrims.com", "hash", "LATAM");
         jugador1.agregarRango("Valorant", "Gold");
         jugador2.agregarRango("Valorant", "Platinum");
 
         Scrim scrim = facade.crearScrim(
-            "Valorant", "5v5", "LATAM", organizador.getId(),
+            "Valorant", "3v3", "LATAM", organizador.getId(),
             "Gold", "Platinum", 80,
             LocalDateTime.now().plusHours(2),
-            4, "ranked-like"
+            6,
+            "ranked-like"
         );
 
-        System.out.println("Scrim creado: " + scrim.getJuego() + " - Estado: " + scrim.getNombreEstado());
+        System.out.println("Scrim creado: " + scrim.getJuego() + " (" + scrim.getFormato() + ") - Estado Inicial: " + scrim.getNombreEstado());
 
         System.out.println("\n>>> STATE: postulaciones y transiciones <<<");
+        
         facade.postularseAScrim(scrim.getId(), jugador1.getId(), "Duelist");
         facade.postularseAScrim(scrim.getId(), jugador2.getId(), "Controller");
-        for (int i = 3; i <= 4; i++) {
+        
+        for (int i = 3; i <= 6; i++) {
             Usuario usuario = facade.crearUsuario("Player" + i, "player" + i + "@test.com", "hash", "LATAM");
             usuario.agregarRango("Valorant", "Gold");
             facade.postularseAScrim(scrim.getId(), usuario.getId(), "Support");
         }
-        System.out.println("Estado luego de completar cupos: " + scrim.getNombreEstado());
+        
+        System.out.println("Estado luego de completar cupos exactos (6/6): " + scrim.getNombreEstado());
 
         for (Postulacion postulacion : scrim.getPostulaciones()) {
             if (postulacion.getEstado().esAceptada()) {
@@ -51,12 +56,17 @@ public class Main {
         facade.iniciarScrim(scrim.getId());
         System.out.println("Estado luego de iniciar: " + scrim.getNombreEstado());
 
+        facade.finalizarScrim(scrim.getId());
+        System.out.println("Estado luego de finalizar la partida: " + scrim.getNombreEstado());
+
         System.out.println("\n>>> STRATEGY: cambio de algoritmo <<<");
         List<Usuario> candidatos = List.of(jugador1, jugador2);
+        
         facade.cambiarEstrategiaMatchmaking(new ByMMRStrategy());
-        System.out.println("Seleccionados por MMR: " + facade.emparejarJugadores(scrim.getId(), candidatos).size());
+        System.out.println("Seleccionados evaluados por MMR: " + facade.emparejarJugadores(scrim.getId(), candidatos).size());
+        
         facade.cambiarEstrategiaMatchmaking(new ByLatencyStrategy());
-        System.out.println("Seleccionados por latencia: " + facade.emparejarJugadores(scrim.getId(), candidatos).size());
+        System.out.println("Seleccionados evaluados por latencia: " + facade.emparejarJugadores(scrim.getId(), candidatos).size());
 
         System.out.println("\n>>> OBSERVER: notificaciones por EventBus <<<");
         System.out.println("Los eventos de cambio de estado fueron publicados automaticamente por los estados concretos.");
